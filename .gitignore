@@ -1,0 +1,13 @@
+*.log
+mlruns/
+QUICK_REFERENCE.txt
+STRUCTURE.md
+EXAMPLES.md 
+*.pyc
+*.pyo
+.env/
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+.vscode/
+.DS_Store
