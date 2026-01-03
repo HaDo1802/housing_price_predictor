@@ -1,0 +1,32 @@
+data:
+  processed_data_path: data/processed/
+  random_state: 42
+  raw_data_path: data/raw/data.csv
+  target_column: SalePrice
+  test_data_path: data/processed/test.csv
+  test_size: 0.2
+  train_data_path: data/processed/train.csv
+  val_size: 0.1
+model:
+  cv_folds: 5
+  hyperparameters:
+    max_depth: 10
+    min_samples_split: 2
+    n_estimators: 100
+  model_type: random_forest
+  optimize_metric: r2
+  random_state: 42
+preprocessing:
+  encode_categorical: true
+  encoding_method: onehot
+  handle_missing: mean
+  handle_outliers: true
+  outlier_method: iqr
+  scale_features: true
+  scaling_method: standard
+training:
+  experiment_name: house_price_prediction
+  log_metrics: true
+  run_name: run_001
+  save_artifacts: true
+  track_experiments: true

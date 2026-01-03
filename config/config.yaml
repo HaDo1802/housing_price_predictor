@@ -1,0 +1,61 @@
+# Production ML Configuration
+
+# Data Configuration
+data:
+  raw_data_path: "data/raw/archive.zip"
+  processed_data_path: "data/processed/"
+  train_data_path: "data/processed/train.csv"
+  test_data_path: "data/processed/test.csv"
+  target_column: "SalePrice"
+  test_size: 0.2        # 20% for testing
+  val_size: 0.1         # 10% of remaining for validation
+  random_state: 42      # For reproducibility
+
+# Preprocessing Configuration
+preprocessing:
+  # Missing value handling
+  handle_missing: "mean"  # Options: mean, median, mode, drop
+  
+  # Outlier handling
+  handle_outliers: true
+  outlier_method: "iqr"   # Options: iqr, zscore
+  
+  # Feature scaling
+  scale_features: true
+  scaling_method: "standard"  # Options: standard, minmax, robust
+  
+  # Categorical encoding
+  encode_categorical: true
+  encoding_method: "onehot"   # Options: onehot, label, target
+
+# Model Configuration
+model:
+  model_type: "random_forest"
+  random_state: 42
+  
+  # Hyperparameters (specific to model_type)
+  hyperparameters:
+    n_estimators: 100
+    max_depth: 10
+    min_samples_split: 2
+    min_samples_leaf: 1
+  
+  # Cross-validation
+  cv_folds: 5
+  
+  # Optimization
+  optimize_metric: "r2"  # Options: r2, rmse, mae, mse
+
+# Training Configuration
+training:
+  experiment_name: "house_price_prediction"
+  run_name: "production_run_v1"
+  
+  # Logging
+  log_metrics: true
+  save_artifacts: true
+  track_experiments: true
+  
+  # Output
+  model_output_dir: "models/production"
+  log_dir: "logs/"

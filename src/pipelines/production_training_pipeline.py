@@ -32,7 +32,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.data.data_splitter import DataSplitter
 from src.features.production_preprocessor import ProductionPreprocessor, DataCleaner
-from src.config.config_manager import ConfigManager
+from config.config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 

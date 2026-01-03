@@ -9,8 +9,6 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any
 from dataclasses import dataclass, field
-
-
 @dataclass
 class DataConfig:
     """Data-related configuration"""
@@ -27,13 +25,13 @@ class DataConfig:
 @dataclass
 class PreprocessingConfig:
     """Preprocessing configuration"""
-    handle_missing: str = "mean"  # mean, median, mode, drop
+    handle_missing: str = "mean"  # Options: mean, median, mode, drop
     handle_outliers: bool = True
-    outlier_method: str = "iqr"  # iqr, zscore
+    outlier_method: str = "iqr"  # Options: iqr, zscore
     scale_features: bool = True
-    scaling_method: str = "standard"  # standard, minmax, robust
+    scaling_method: str = "standard"  # Options: standard, minmax, robust
     encode_categorical: bool = True
-    encoding_method: str = "onehot"  # onehot, label, target
+    encoding_method: str = "onehot"  # Options: onehot, label, target
 
 
 @dataclass
@@ -54,6 +52,8 @@ class TrainingConfig:
     log_metrics: bool = True
     save_artifacts: bool = True
     track_experiments: bool = True
+    model_output_dir: str = "models"
+    log_dir: str = "logs"
 
 
 @dataclass
@@ -128,57 +128,57 @@ class ConfigManager:
         with open(output_path, 'w') as f:
             yaml.dump(config_dict, f, default_flow_style=False)
     
-    @staticmethod
-    def create_default_config(output_path: str = "config/config.yaml") -> None:
-        """Create a default configuration file"""
-        default_config = {
-            'data': {
-                'raw_data_path': 'data/raw/data.csv',
-                'processed_data_path': 'data/processed/',
-                'train_data_path': 'data/processed/train.csv',
-                'test_data_path': 'data/processed/test.csv',
-                'target_column': 'SalePrice',
-                'test_size': 0.2,
-                'val_size': 0.1,
-                'random_state': 42
-            },
-            'preprocessing': {
-                'handle_missing': 'mean',
-                'handle_outliers': True,
-                'outlier_method': 'iqr',
-                'scale_features': True,
-                'scaling_method': 'standard',
-                'encode_categorical': True,
-                'encoding_method': 'onehot'
-            },
-            'model': {
-                'model_type': 'random_forest',
-                'random_state': 42,
-                'hyperparameters': {
-                    'n_estimators': 100,
-                    'max_depth': 10,
-                    'min_samples_split': 2
-                },
-                'cv_folds': 5,
-                'optimize_metric': 'r2'
-            },
-            'training': {
-                'experiment_name': 'house_price_prediction',
-                'run_name': 'run_001',
-                'log_metrics': True,
-                'save_artifacts': True,
-                'track_experiments': True
-            }
-        }
+    # @staticmethod
+    # def create_default_config(output_path: str = "config/default_config.yaml") -> None:
+    #     """Create a default configuration file"""
+    #     default_config = {
+    #         'data': {
+    #             'raw_data_path': 'data/raw/data.csv',
+    #             'processed_data_path': 'data/processed/',
+    #             'train_data_path': 'data/processed/train.csv',
+    #             'test_data_path': 'data/processed/test.csv',
+    #             'target_column': 'SalePrice',
+    #             'test_size': 0.2,
+    #             'val_size': 0.1,
+    #             'random_state': 42
+    #         },
+    #         'preprocessing': {
+    #             'handle_missing': 'mean',
+    #             'handle_outliers': True,
+    #             'outlier_method': 'iqr',
+    #             'scale_features': True,
+    #             'scaling_method': 'standard',
+    #             'encode_categorical': True,
+    #             'encoding_method': 'onehot'
+    #         },
+    #         'model': {
+    #             'model_type': 'random_forest',
+    #             'random_state': 42,
+    #             'hyperparameters': {
+    #                 'n_estimators': 100,
+    #                 'max_depth': 10,
+    #                 'min_samples_split': 2
+    #             },
+    #             'cv_folds': 5,
+    #             'optimize_metric': 'r2'
+    #         },
+    #         'training': {
+    #             'experiment_name': 'house_price_prediction',
+    #             'run_name': 'run_001',
+    #             'log_metrics': True,
+    #             'save_artifacts': True,
+    #             'track_experiments': True
+    #         }
+    #     }
         
-        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w') as f:
-            yaml.dump(default_config, f, default_flow_style=False)
+    #     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    #     with open(output_path, 'w') as f:
+    #         yaml.dump(default_config, f, default_flow_style=False)
 
 
 if __name__ == "__main__":
     # Create default config
-    ConfigManager.create_default_config()
+    # ConfigManager.create_default_config()
     
     # Load and use config
     config_manager = ConfigManager()
