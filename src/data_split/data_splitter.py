@@ -53,15 +53,6 @@ class DataSplitter:
         random_state: int = 42,
         verbose: bool = True
     ):
-        """
-        Initialize DataSplitter.
-        
-        Args:
-            test_size: Proportion of data for testing (0.0 to 1.0)
-            val_size: Proportion of training data for validation (0.0 to 1.0)
-            random_state: Random seed for reproducibility
-            verbose: Whether to log split information
-        """
         self.test_size = test_size
         self.val_size = val_size
         self.random_state = random_state
@@ -86,7 +77,6 @@ class DataSplitter:
         self,
         X: pd.DataFrame,
         y: pd.Series,
-        stratify: Optional[pd.Series] = None,
         return_val: bool = True
     ) -> Tuple:
         """
@@ -106,9 +96,7 @@ class DataSplitter:
         X_temp, X_test, y_temp, y_test = train_test_split(
             X, y,
             test_size=self.test_size,
-            random_state=self.random_state,
-            stratify=stratify
-        )
+            random_state=self.random_state        )
         
         if self.verbose:
             logger.info(f"Initial split - Train+Val: {len(X_temp)}, Test: {len(X_test)}")
@@ -125,9 +113,7 @@ class DataSplitter:
         X_train, X_val, y_train, y_val = train_test_split(
             X_temp, y_temp,
             test_size=val_size_adjusted,
-            random_state=self.random_state,
-            stratify=stratify[:len(X_temp)] if stratify is not None else None
-        )
+            random_state=self.random_state )
         
         if self.verbose:
             logger.info(
@@ -145,7 +131,6 @@ class DataSplitter:
         self,
         df: pd.DataFrame,
         target_col: str,
-        stratify_col: Optional[str] = None,
         return_val: bool = True
     ) -> Tuple:
         """
@@ -162,119 +147,8 @@ class DataSplitter:
         """
         X = df.drop(columns=[target_col])
         y = df[target_col]
-        
-        stratify = df[stratify_col] if stratify_col else None
-        
-        return self.split(X, y, stratify=stratify, return_val=return_val)
-    
-    def split_and_save(
-        self,
-        df: pd.DataFrame,
-        target_col: str,
-        output_dir: str,
-        save_indices: bool = True
-    ) -> None:
-        """
-        Split data and save to disk.
-        
-        This is useful for:
-        1. Consistency across experiments
-        2. Faster experimentation (load pre-split data)
-        3. Debugging (inspect exact train/test sets)
-        
-        Args:
-            df: Input dataframe
-            target_col: Name of target column
-            output_dir: Directory to save split data
-            save_indices: Whether to save split indices for reproducibility
-        """
-        output_path = Path(output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
-        
-        # Split data
-        X_train, X_test, X_val, y_train, y_test, y_val = self.split_dataframe(
-            df, target_col
-        )
-        
-        # Reconstruct full dataframes
-        train_df = X_train.copy()
-        train_df[target_col] = y_train
-        
-        test_df = X_test.copy()
-        test_df[target_col] = y_test
-        
-        val_df = X_val.copy()
-        val_df[target_col] = y_val
-        
-        # Save splits
-        train_path = output_path / "train.csv"
-        test_path = output_path / "test.csv"
-        val_path = output_path / "val.csv"
-        
-        train_df.to_csv(train_path, index=False)
-        test_df.to_csv(test_path, index=False)
-        val_df.to_csv(val_path, index=False)
-        
-        if self.verbose:
-            logger.info(f"Saved train data to {train_path}")
-            logger.info(f"Saved test data to {test_path}")
-            logger.info(f"Saved validation data to {val_path}")
-        
-        # Save indices for reproducibility
-        if save_indices:
-            indices = {
-                'train_indices': X_train.index.tolist(),
-                'test_indices': X_test.index.tolist(),
-                'val_indices': X_val.index.tolist()
-            }
-            
-            import json
-            indices_path = output_path / "split_indices.json"
-            with open(indices_path, 'w') as f:
-                json.dump(indices, f, indent=2)
-            
-            if self.verbose:
-                logger.info(f"Saved split indices to {indices_path}")
-    
-    def load_split_data(
-        self,
-        data_dir: str,
-        target_col: str
-    ) -> Tuple:
-        """
-        Load pre-split data from disk.
-        
-        Args:
-            data_dir: Directory containing split data
-            target_col: Name of target column
-        
-        Returns:
-            Tuple of (X_train, X_test, X_val, y_train, y_test, y_val)
-        """
-        data_path = Path(data_dir)
-        
-        # Load dataframes
-        train_df = pd.read_csv(data_path / "train.csv")
-        test_df = pd.read_csv(data_path / "test.csv")
-        val_df = pd.read_csv(data_path / "val.csv")
-        
-        # Split features and target
-        X_train = train_df.drop(columns=[target_col])
-        y_train = train_df[target_col]
-        
-        X_test = test_df.drop(columns=[target_col])
-        y_test = test_df[target_col]
-        
-        X_val = val_df.drop(columns=[target_col])
-        y_val = val_df[target_col]
-        
-        if self.verbose:
-            logger.info(f"Loaded split data from {data_dir}")
-            logger.info(
-                f"Sizes - Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}"
-            )
-        
-        return X_train, X_test, X_val, y_train, y_test, y_val
+
+        return self.split(X, y, return_val=return_val)
     
     def get_split_statistics(
         self,
@@ -327,33 +201,21 @@ if __name__ == "__main__":
     # Setup logging
     logging.basicConfig(level=logging.INFO)
     
-    # Create sample data
-    np.random.seed(42)
-    df = pd.DataFrame({
-        'feature1': np.random.randn(1000),
-        'feature2': np.random.randn(1000),
-        'feature3': np.random.randn(1000),
-        'target': np.random.randn(1000)
-    })
-    
+    # import data
+    df = pd.read_csv('/Users/hado/Desktop/Career/Coding/Data Engineer/Project/house_price_predictor/data_data/AmesHousing.csv')
+
     # Initialize splitter
     splitter = DataSplitter(test_size=0.2, val_size=0.1, random_state=42)
     
     # Method 1: Split and return
     X_train, X_test, X_val, y_train, y_test, y_val = splitter.split_dataframe(
-        df, target_col='target'
+        df, target_col='SalePrice'
     )
     
     print(f"\nTrain size: {len(X_train)}")
     print(f"Val size: {len(X_val)}")
     print(f"Test size: {len(X_test)}")
     
-    # Method 2: Split and save
-    splitter.split_and_save(
-        df,
-        target_col='target',
-        output_dir='data/processed/'
-    )
     
     # Get statistics
     stats = splitter.get_split_statistics(y_train, y_test, y_val)
