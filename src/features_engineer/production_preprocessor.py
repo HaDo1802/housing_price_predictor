@@ -18,6 +18,7 @@ from typing import Tuple, Optional, List
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
@@ -76,8 +77,8 @@ class ProductionPreprocessor:
     
     def _identify_feature_types(self, X: pd.DataFrame) -> None:
         """
-        Identify numeric and categorical features.
-        
+        Mutating method to identify numeric and categorical features.  
+              
         Args:
             X: Input dataframe
         """
@@ -115,6 +116,10 @@ class ProductionPreprocessor:
         else:
             raise ValueError(f"Unknown encoding method: {self.encoding_method}")
     
+    def _get_imputer(self, strategy: str):
+        """Get the appropriate imputer based on configuration"""  
+        return SimpleImputer(strategy=strategy)
+    
     def _build_preprocessor(self) -> ColumnTransformer:
         """
         Build the preprocessing pipeline.
@@ -127,6 +132,7 @@ class ProductionPreprocessor:
         # Add numeric transformer
         if self.numeric_features:
             numeric_transformer = Pipeline(steps=[
+                ('imputer', self._get_imputer('mean')),
                 ('scaler', self._get_scaler())
             ])
             transformers.append(
@@ -154,9 +160,7 @@ class ProductionPreprocessor:
     def fit_transform(self, X: pd.DataFrame) -> np.ndarray:
         """
         Fit preprocessor on training data and transform it.
-        
-        ⚠️ WARNING: Use this ONLY on training data!
-        
+            
         Args:
             X: Training features
         
@@ -406,31 +410,6 @@ class DataCleaner:
 
 # Example usage
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    
-    # Create sample data
-    np.random.seed(42)
-    df = pd.DataFrame({
-        'numeric1': np.random.randn(1000),
-        'numeric2': np.random.randn(1000),
-        'category1': np.random.choice(['A', 'B', 'C'], 1000),
-        'category2': np.random.choice(['X', 'Y'], 1000),
-        'target': np.random.randn(1000)
-    })
-    
-    # Split data first
-    from sklearn.model_selection import train_test_split
-    
-    X = df.drop('target', axis=1)
-    y = df['target']
-    
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
-    
-    print(f"Train size: {len(X_train)}")
-    print(f"Test size: {len(X_test)}")
-    
     # Initialize preprocessor
     preprocessor = ProductionPreprocessor(
         scaling_method='standard',
@@ -438,27 +417,3 @@ if __name__ == "__main__":
         verbose=True
     )
     
-    # Fit on training data ONLY
-    X_train_transformed = preprocessor.fit_transform(X_train)
-    
-    # Transform test data using fitted preprocessor
-    X_test_transformed = preprocessor.transform(X_test)
-    
-    print(f"\nTransformed train shape: {X_train_transformed.shape}")
-    print(f"Transformed test shape: {X_test_transformed.shape}")
-    
-    # Get feature names
-    feature_names = preprocessor.get_feature_names()
-    print(f"\nFeature names after transformation:")
-    print(feature_names[:10])  # Show first 10
-    
-    # Save for production
-    preprocessor.save('models/preprocessor.pkl')
-    
-    # Load in production
-    loaded_preprocessor = ProductionPreprocessor.load('models/preprocessor.pkl')
-    
-    # Transform new data
-    X_new = X_test.head(5)
-    X_new_transformed = loaded_preprocessor.transform(X_new)
-    print(f"\nNew data transformed shape: {X_new_transformed.shape}")

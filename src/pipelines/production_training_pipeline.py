@@ -30,8 +30,8 @@ from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 import sys
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from src.data.data_splitter import DataSplitter
-from src.features.production_preprocessor import ProductionPreprocessor, DataCleaner
+from src.data_split.data_splitter import DataSplitter
+from src.features_engineer.production_preprocessor import ProductionPreprocessor, DataCleaner
 from config.config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
