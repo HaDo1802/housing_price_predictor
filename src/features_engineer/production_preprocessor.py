@@ -21,7 +21,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, On
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-
+from src.data_split.data_splitter import DataSplitter
 logger = logging.getLogger(__name__)
 
 
@@ -370,42 +370,42 @@ class DataCleaner:
         
         return df_clean
     
-    @staticmethod
-    def validate_ranges(
-        df: pd.DataFrame,
-        range_map: dict,
-        drop_invalid: bool = True
-    ) -> pd.DataFrame:
-        """
-        Validate that numeric columns are within expected ranges.
+    # @staticmethod
+    # def validate_ranges(
+    #     df: pd.DataFrame,
+    #     range_map: dict,
+    #     drop_invalid: bool = True
+    # ) -> pd.DataFrame:
+    #     """
+    #     Validate that numeric columns are within expected ranges.
         
-        Args:
-            df: Input dataframe
-            range_map: Dict mapping column names to (min, max) tuples
-                      e.g., {'age': (0, 120), 'price': (0, 1000000)}
-            drop_invalid: Whether to drop invalid rows
+    #     Args:
+    #         df: Input dataframe
+    #         range_map: Dict mapping column names to (min, max) tuples
+    #                   e.g., {'age': (0, 120), 'price': (0, 1000000)}
+    #         drop_invalid: Whether to drop invalid rows
         
-        Returns:
-            Dataframe with valid values
-        """
-        df_clean = df.copy()
+    #     Returns:
+    #         Dataframe with valid values
+    #     """
+    #     df_clean = df.copy()
         
-        for col, (min_val, max_val) in range_map.items():
-            if col in df_clean.columns:
-                invalid_mask = (df_clean[col] < min_val) | (df_clean[col] > max_val)
-                invalid_count = invalid_mask.sum()
+    #     for col, (min_val, max_val) in range_map.items():
+    #         if col in df_clean.columns:
+    #             invalid_mask = (df_clean[col] < min_val) | (df_clean[col] > max_val)
+    #             invalid_count = invalid_mask.sum()
                 
-                if invalid_count > 0:
-                    logger.warning(
-                        f"Found {invalid_count} invalid values in {col} "
-                        f"(expected range: [{min_val}, {max_val}])"
-                    )
+    #             if invalid_count > 0:
+    #                 logger.warning(
+    #                     f"Found {invalid_count} invalid values in {col} "
+    #                     f"(expected range: [{min_val}, {max_val}])"
+    #                 )
                     
-                    if drop_invalid:
-                        df_clean = df_clean[~invalid_mask]
-                        logger.info(f"Dropped {invalid_count} invalid rows")
+    #                 if drop_invalid:
+    #                     df_clean = df_clean[~invalid_mask]
+    #                     logger.info(f"Dropped {invalid_count} invalid rows")
         
-        return df_clean
+    #     return df_clean
 
 
 # Example usage
@@ -416,4 +416,33 @@ if __name__ == "__main__":
         encoding_method='onehot',
         verbose=True
     )
+    df = pd.read_csv('/Users/hado/Desktop/Career/Coding/Data Engineer/Project/house_price_predictor/data_data/AmesHousing.csv')
+
+    data_cleaner = DataCleaner()
+    splitter = DataSplitter(test_size=0.2, val_size=0.1, random_state=42)
     
+    X_train, X_test, X_val, y_train, y_test, y_val = splitter.split_dataframe(
+        df, target_col='SalePrice'
+    )
+    X_train_transformed = preprocessor.fit_transform(X_train)
+    # Transform test data using fitted preprocessor
+    X_val_transformed = preprocessor.transform(X_val)
+    X_test_transformed = preprocessor.transform(X_test)
+    
+    print(f"\nTransformed train shape: {X_train_transformed.shape}")
+    print(f"Transformed test shape: {X_test_transformed.shape}")
+    
+    # Get feature names
+    feature_names = preprocessor.get_feature_names()
+    print(f"\nFeature names after transformation:")
+    print(feature_names[:10])  # Show first 10
+    
+    # Save for production
+    preprocessor.save('models/preprocessor_test.pkl')
+    
+    # Load in production
+    loaded_preprocessor = ProductionPreprocessor.load('models/preprocessor.pkl')
+    
+
+
+

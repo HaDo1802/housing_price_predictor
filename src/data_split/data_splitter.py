@@ -203,14 +203,34 @@ if __name__ == "__main__":
     
     # import data
     df = pd.read_csv('/Users/hado/Desktop/Career/Coding/Data Engineer/Project/house_price_predictor/data_data/AmesHousing.csv')
-
+    target_col='SalePrice'
+    output_dir = 'data/processed/'
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
     # Initialize splitter
     splitter = DataSplitter(test_size=0.2, val_size=0.1, random_state=42)
     
-    # Method 1: Split and return
     X_train, X_test, X_val, y_train, y_test, y_val = splitter.split_dataframe(
         df, target_col='SalePrice'
     )
+    # Reconstruct full dataframes
+    train_df = X_train.copy()
+    train_df[target_col] = y_train
+    
+    test_df = X_test.copy()
+    test_df[target_col] = y_test
+    
+    val_df = X_val.copy()
+    val_df[target_col] = y_val
+    
+    # Save splits
+    train_path = output_path / "train.csv"
+    test_path = output_path / "test.csv"
+    val_path = output_path / "val.csv"
+    
+    train_df.to_csv(train_path, index=False)
+    test_df.to_csv(test_path, index=False)
+    val_df.to_csv(val_path, index=False)
     
     print(f"\nTrain size: {len(X_train)}")
     print(f"Val size: {len(X_val)}")
