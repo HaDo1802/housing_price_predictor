@@ -21,7 +21,7 @@ import yaml
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 import mlflow
-from src.pipelines.production_training_pipeline import TrainingPipeline
+from src.pipelines.training_pipeline import TrainingPipeline
 
 logging.basicConfig(
     level=logging.INFO,
