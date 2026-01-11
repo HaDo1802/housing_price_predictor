@@ -13,21 +13,20 @@ ml-project/
 │
 ├── data/
 │   ├── raw/                     # Original, immutable data
-│   ├── interim/                 # Intermediate processing
 │   ├── processed/               # Final processed data
-│   └── external/                # External data sources
+│   
 │
 ├── src/
 │   ├── __init__.py
 │   │
-│   ├── data/                    # Data processing
+│   ├── data_splitter/                    # Data processing
 │   │   ├── __init__.py
 │   │   ├── data_loader.py       # Load data from various sources
 │   │   ├── data_splitter.py     # Train/test/val splitting
 │   │   ├── data_cleaner.py      # Cleaning operations
 │   │   └── data_validator.py    # Data validation
 │   │
-│   ├── features/                # Feature engineering
+│   ├── features_engineer/                # Feature engineering
 │   │   ├── __init__.py
 │   │   ├── feature_engineer.py  # Feature creation
 │   │   ├── feature_selector.py  # Feature selection

@@ -15,6 +15,8 @@ import pandas as pd
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
+import mlflow
+import mlflow.sklearn
 # Import custom modules
 import sys
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -38,6 +40,7 @@ class TrainingPipeline:
     def __init__(self, config_path: str = "config/config.yaml"):
         """Initialize pipeline with configuration."""
         # Load config
+        self.config_path = config_path
         self.config_manager = ConfigManager(config_path)
         self.config = self.config_manager.get_config()
         
@@ -223,17 +226,21 @@ class TrainingPipeline:
         logger.info("✓ All artifacts saved")
     
     def run(self) -> dict:
-        """
-        Run complete training pipeline.
-        
-        Returns:
-            Dictionary with metrics
-        """
-        logger.info("=" * 80)
-        logger.info("STARTING TRAINING PIPELINE")
-        logger.info("=" * 80)
-        
-        try:
+        """Run training with MLflow tracking"""
+        # Start MLflow run
+        with mlflow.start_run(run_name=self.config.training.run_name):
+            
+            # Log config as parameters
+            mlflow.log_params({
+                'test_size': self.config.data.test_size,
+                'val_size': self.config.data.val_size,
+                'random_state': self.config.data.random_state,
+                'scaling_method': self.config.preprocessing.scaling_method,
+                **self.config.model.hyperparameters  # All hyperparameters
+            })
+             # Set tags
+            mlflow.set_tag('model_type', 'GradientBoostingRegressor')
+            mlflow.set_tag('project', 'house_price_prediction')
             # Execute pipeline steps
             self.load_data()
             self.select_features()
@@ -241,19 +248,37 @@ class TrainingPipeline:
             self.preprocess_data()
             self.train_model()
             self.metrics = self.evaluate_model()
+            
+            # Log metrics
+            mlflow.log_metrics({
+                'test_r2': self.metrics['test']['r2'],
+                'test_rmse': self.metrics['test']['rmse'],
+                'test_mae': self.metrics['test']['mae'],
+                'val_r2': self.metrics['validation']['r2'],
+                'val_rmse': self.metrics['validation']['rmse']
+            })
+            
+            # Log model
+            mlflow.sklearn.log_model(
+                self.model,
+                'model',
+                signature=mlflow.models.infer_signature(
+                    self.X_train_transformed,
+                    self.y_train
+                )
+            )
+            
+            # Log artifacts
+            mlflow.log_artifact(self.config_path, 'config.yaml')
+            
+            # Log feature names
+            with open('feature_names.json', 'w') as f:
+                json.dump(self.preprocessor.get_feature_names(), f)
+            mlflow.log_artifact('feature_names.json')
+            
             self.save_artifacts()
             
-            logger.info("=" * 80)
-            logger.info("PIPELINE COMPLETE!")
-            logger.info(f"Test R²: {self.metrics['test']['r2']:.4f}")
-            logger.info(f"Test RMSE: {self.metrics['test']['rmse']:.4f}")
-            logger.info("=" * 80)
-            
             return self.metrics
-            
-        except Exception as e:
-            logger.error(f"Pipeline failed: {e}")
-            raise
 
 
 if __name__ == "__main__":

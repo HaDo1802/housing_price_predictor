@@ -1,5 +1,4 @@
 *.log
-mlruns/
 QUICK_REFERENCE.txt
 STRUCTURE.md
 EXAMPLES.md 
@@ -11,3 +10,6 @@ __pycache__/
 .ipynb_checkpoints/
 .vscode/
 .DS_Store
+mlflow.db
+feature_names.json
+mlruns/

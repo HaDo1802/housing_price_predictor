@@ -1,0 +1,44 @@
+.
+├── README.md
+├── config
+│   ├── config.yaml
+│   ├── config_manager.py
+│   └── default_config.yaml
+├── data
+│   ├── AmesHousing.csv
+│   └── processed
+│       ├── test.csv
+│       ├── train.csv
+│       └── val.csv
+├── docs
+│   ├── PRODUCTION_STRUCTURE.md
+│   ├── QUICK_REFERENCE.txt
+│   └── WORKFLOW_DIAGRAM.md
+├── feature_names.json
+├── mlflow.db
+├── models
+│   └── production
+│       ├── config.yaml
+│       ├── metadata.json
+│       ├── model.pkl
+│       └── preprocessor.pkl
+├── notebook
+│   ├── EDA.ipynb
+│   └── Model_Exploration.ipynb
+├── predict.py
+├── project_structure.txt
+├── requirements.txt
+├── src
+│   ├── __init__.py
+│   ├── data_split
+│   │   └── data_splitter.py
+│   ├── features_engineer
+│   │   └── production_preprocessor.py
+│   └── pipelines
+│       ├── fine_tune.py
+│       ├── production_inference_pipeline.py
+│       ├── production_training_pipeline.py
+│       └── quick_test_experiment.py
+└── tests
+
+137 directories, 195 files

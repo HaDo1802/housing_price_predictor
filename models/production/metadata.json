@@ -1,24 +1,24 @@
 {
   "model_type": "GradientBoostingRegressor",
   "hyperparameters": {
-    "n_estimators": 100,
-    "learning_rate": 0.1,
-    "max_depth": 5,
-    "min_samples_split": 2,
+    "learning_rate": 0.15,
+    "max_depth": 7,
     "min_samples_leaf": 1,
+    "min_samples_split": 2,
+    "n_estimators": 100,
     "subsample": 0.8
   },
   "test_metrics": {
-    "r2": 0.917022936512699,
-    "rmse": 25792.87854574229,
-    "mae": 15819.065444500751,
-    "mse": 665272583.6754128
+    "r2": 0.9000117453858884,
+    "rmse": 28313.611989579305,
+    "mae": 16539.38801582182,
+    "mse": 801660623.896449
   },
   "val_metrics": {
-    "r2": 0.9290349514200323,
-    "rmse": 18894.77530945159,
-    "mae": 12960.694086038015,
-    "mse": 357012533.9946614
+    "r2": 0.9181410504502145,
+    "rmse": 20293.29474572626,
+    "mae": 13964.841298175965,
+    "mse": 411817811.636921
   },
   "feature_names": [
     "Lot Area",
