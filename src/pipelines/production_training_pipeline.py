@@ -95,10 +95,9 @@ class TrainingPipeline:
         features_config = self.config.__dict__.get('features', {})
         
         # Get feature lists
-        numeric = features_config.get('numeric', [])
-        categorical = features_config.get('categorical', [])
-        exclude = features_config.get('exclude', [])
-        
+        numeric = features_config.numeric
+        categorical = features_config.categorical
+
         # Combine features + target
         selected = numeric + categorical
         target_col = self.config.data.target_column
@@ -128,7 +127,7 @@ class TrainingPipeline:
         
         self.X_train, self.X_test, self.X_val, self.y_train, self.y_test, self.y_val = \
             self.splitter.split_dataframe(
-                self.df_raw,
+                self.df_selected,
                 target_col=self.config.data.target_column
             )
         

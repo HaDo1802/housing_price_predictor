@@ -54,12 +54,16 @@ class TrainingConfig:
     track_experiments: bool = True
     model_output_dir: str = "models"
     log_dir: str = "logs"
-
+@dataclass
+class FeatureSelectionConfig:
+    numeric: list = field(default_factory=list)
+    categorical: list = field(default_factory=list)
 
 @dataclass
 class MLConfig:
     """Complete ML configuration"""
     data: DataConfig
+    features: FeatureSelectionConfig
     preprocessing: PreprocessingConfig
     model: ModelConfig
     training: TrainingConfig
@@ -101,6 +105,7 @@ class ConfigManager:
         
         return MLConfig(
             data=DataConfig(**config_dict['data']),
+            features=FeatureSelectionConfig(**config_dict['features']),
             preprocessing=PreprocessingConfig(**config_dict['preprocessing']),
             model=ModelConfig(**config_dict['model']),
             training=TrainingConfig(**config_dict['training'])
@@ -185,5 +190,6 @@ if __name__ == "__main__":
     config = config_manager.get_config()
     
     print(f"Target column: {config.data.target_column}")
+    print(f"Feature selection: {config.features.numeric}")
     print(f"Model type: {config.model.model_type}")
     print(f"Test size: {config.data.test_size}")
