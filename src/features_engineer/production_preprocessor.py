@@ -347,28 +347,7 @@ class DataCleaner:
             logger.info(f"Removed {removed} duplicate rows")
         
         return df_clean
-    
-    @staticmethod
-    def fix_data_types(df: pd.DataFrame, type_map: dict) -> pd.DataFrame:
-        """
-        Fix data types of columns.
-        
-        Args:
-            df: Input dataframe
-            type_map: Dict mapping column names to desired types
-                     e.g., {'age': 'int', 'price': 'float'}
-        
-        Returns:
-            Dataframe with fixed types
-        """
-        df_clean = df.copy()
-        
-        for col, dtype in type_map.items():
-            if col in df_clean.columns:
-                df_clean[col] = df_clean[col].astype(dtype)
-                logger.info(f"Converted {col} to {dtype}")
-        
-        return df_clean
+
     
     # @staticmethod
     # def validate_ranges(

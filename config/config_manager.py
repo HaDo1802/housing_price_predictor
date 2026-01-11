@@ -13,9 +13,9 @@ from dataclasses import dataclass, field
 class DataConfig:
     """Data-related configuration"""
     raw_data_path: str
-    processed_data_path: str
-    train_data_path: str
-    test_data_path: str
+    # processed_data_path: str
+    # train_data_path: str
+    # test_data_path: str
     target_column: str
     test_size: float = 0.2
     val_size: float = 0.1
