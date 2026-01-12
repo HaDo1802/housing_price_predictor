@@ -53,7 +53,7 @@ housing_price_predictor/
 │   │   └── data_splitter.py
 │   │
 │   ├── features_engineer/          # Modular script handle feature engineer: scaling, imputer, encoder,..
-│   │   └── production_preprocessor.py
+│   │   └── preprocessor.py
 │   │
 │   └── pipelines/                  # Script that compile others sub-sripts to built full pipelines
 │       ├── training_pipeline.py    # Modular script handle training pipeline: load, cleaning, split, features engineer, & train

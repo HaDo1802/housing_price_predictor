@@ -52,7 +52,7 @@ class InferencePipeline:
         self.preprocessor = self._load_preprocessor()
         self.metadata = self._load_metadata()
         
-        logger.info(f"Inference pipeline initialized with model: {self.metadata['best_model']}")
+        logger.info(f"Inference pipeline initialized with model: {self.metadata['model_type']}")
     
     def _validate_model_dir(self) -> None:
         """Validate that model directory contains required files"""
@@ -135,42 +135,31 @@ class InferencePipeline:
         
         return prediction[0]
     
-    def predict_with_uncertainty(
-        self,
-        X: pd.DataFrame,
-        n_iterations: int = 100
-    ) -> tuple:
-        """
-        Make predictions with uncertainty estimates.
-        
-        Only works with tree-based models that support this.
-        
-        Args:
-            X: Features dataframe
-            n_iterations: Number of iterations for uncertainty estimation
-        
-        Returns:
-            (predictions, lower_bound, upper_bound)
-        """
-        predictions = self.predict(X)
-        
-        # For tree-based models, we can use prediction intervals
-        if hasattr(self.model, 'estimators_'):
-            # Get predictions from all trees
-            tree_predictions = np.array([
-                tree.predict(self.preprocessor.transform(X))
-                for tree in self.model.estimators_
-            ])
-            
-            # Calculate confidence intervals
-            lower_bound = np.percentile(tree_predictions, 2.5, axis=0)
-            upper_bound = np.percentile(tree_predictions, 97.5, axis=0)
-            
-            return predictions, lower_bound, upper_bound
-        
-        else:
-            logger.warning("Model does not support uncertainty estimation")
-            return predictions, predictions, predictions
+    def predict_with_uncertainty(self, X: pd.DataFrame) -> tuple:
+        preds = self.predict(X)
+
+        X_t = self.preprocessor.transform(X)
+
+        if hasattr(self.model, "estimators_"):
+            est = self.model.estimators_
+
+            # RandomForest: list of trees
+            if isinstance(est, list):
+                trees = est
+
+            # GradientBoosting: 2D array (n_estimators, 1) -> flatten
+            else:
+                trees = np.array(est).ravel().tolist()
+
+            tree_preds = np.array([t.predict(X_t) for t in trees])
+
+            lower = np.percentile(tree_preds, 2.5, axis=0)
+            upper = np.percentile(tree_preds, 97.5, axis=0)
+            return preds, lower, upper
+
+        logger.warning("Model does not support uncertainty estimation")
+        return preds, preds, preds
+
     
     def _validate_input(self, X: pd.DataFrame) -> None:
         """
@@ -263,27 +252,37 @@ if __name__ == "__main__":
     pipeline = InferencePipeline('models/production')
     
     # Example: Make prediction on new data
-    new_data = pd.DataFrame({
-        'numeric1': [0.5],
-        'numeric2': [-0.2],
-        'category1': ['A'],
-        'category2': ['X']
-    })
-    
-    prediction = pipeline.predict(new_data)
-    print(f"Prediction: {prediction[0]:.2f}")
-    
-    # Example: Single prediction
-    features = {
-        'numeric1': 0.5,
-        'numeric2': -0.2,
-        'category1': 'A',
-        'category2': 'X'
-    }
-    
-    single_pred = pipeline.predict_single(features)
-    print(f"Single prediction: {single_pred:.2f}")
-    
+    new_data = pd.read_csv('data/test_inference_data.csv')
+    features = [
+        'Lot Area',
+        'Total Bsmt SF',
+        '1st Flr SF',
+        '2nd Flr SF',
+        'Gr Liv Area',
+        'Garage Area',
+        'Overall Qual',
+        'Overall Cond',
+        'Year Built',
+        'Year Remod/Add',
+        'Bedroom AbvGr',
+        'Full Bath',
+        'Half Bath',
+        'TotRms AbvGrd',
+        'Fireplaces',
+        'Garage Cars',
+        'Neighborhood',
+        'MS Zoning',
+        'Bldg Type',
+        'House Style',
+        'Foundation',
+        'Central Air',
+        'Garage Type' ]
+    new_data = new_data[features]
+    preds, lower, upper = pipeline.predict_with_uncertainty(new_data)
+    print(
+    f"Pred[0] = {preds[0]:.2f} "
+    f"(interval: between {preds[0] + lower[0]:.2f} and {preds[0] + upper[0]:.2f})"
+          )    
     # Example: Get feature importance
     try:
         importance = pipeline.get_feature_importance(top_n=5)
