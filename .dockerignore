@@ -1,0 +1,102 @@
+# ==========================================
+# Docker Ignore File
+# Excludes files from Docker build context
+# ==========================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Data files (large files)
+data/*.csv
+data/*.zip
+data/*.parquet
+data/raw/
+data/processed/
+!data/.gitkeep
+
+# MLflow
+mlruns/
+mlflow.db
+
+# Logs
+*.log
+logs/
+*.out
+
+# Documentation
+docs/
+README.md
+*.md
+!requirements.txt
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Testing
+tests/
+.pytest_cache/
+.tox/
+*.coverage
+.coverage.*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Notebooks (for training/exploration)
+notebook/
+notebooks/
+*.ipynb
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Model artifacts (these should be mounted as volumes)
+# mlruns/
+# models/production/*.pkl
+
+# OS
+Thumbs.db
+.DS_Store
