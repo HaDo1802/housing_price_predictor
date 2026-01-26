@@ -1,4 +1,7 @@
 # 🏠 Housing Price Prediction — Production-Grade MLOps Pipeline
+<p align="center">
+<img src="image/image.png" alt="Real Estate Data Pipeline Cover Image" />
+</p>
 
 An end-to-end **production-oriented machine learning pipeline** for predicting housing prices using the Ames Housing dataset.  
 This project demonstrates **correct MLOps principles**, including data leakage prevention, train/validation/test separation, experiment tracking, reproducibility, and artifact management.
@@ -209,6 +212,18 @@ mlflow ui
 ```
 
 Open: http://localhost:5000
+
+---
+
+## 🐳 Docker Containerization
+
+**Why containerize?**
+- **Reproducibility:** lock runtime dependencies and OS-level behavior so training/inference behaves the same everywhere.  
+- **Portability:** run the same stack locally, on a server, or in CI without environment drift.  
+- **Service isolation:** keep MLflow, FastAPI, and Streamlit separated with clear ports and volumes.  
+- **Faster onboarding:** one command starts the full stack without manual setup.  
+
+**Set up**
 
 ---
 
