@@ -1,3 +1,4 @@
+[![ml-pipeline-ci](https://github.com/HaDo1802/housing_price_predictor/actions/workflows/ml_pipeline_ci.yml/badge.svg)](https://github.com/HaDo1802/housing_price_predictor/actions/workflows/ml_pipeline_ci.yml)
 # 🏠 Housing Price Prediction — Production-Grade MLOps Pipeline
 <p align="center">
 <img src="image/image.png" alt="Real Estate Data Pipeline Cover Image" />
