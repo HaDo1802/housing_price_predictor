@@ -20,8 +20,12 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import (MinMaxScaler, OneHotEncoder, RobustScaler,
-                                   StandardScaler)
+from sklearn.preprocessing import (
+    MinMaxScaler,
+    OneHotEncoder,
+    RobustScaler,
+    StandardScaler,
+)
 
 from src.data_split.data_splitter import DataSplitter
 
