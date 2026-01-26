@@ -1,56 +1,35 @@
-version: '3.8'
-
-# ==========================================
-# Housing Price Prediction - Docker Compose
-# ==========================================
-# Services:
-#   1. api - FastAPI inference service
-#   2. streamlit - Streamlit web app
-#   3. mlflow - MLflow tracking server (optional)
-# ==========================================
+version: "3.8"
 
 services:
-  # ==========================================
-  # FastAPI Inference Service
-  # ==========================================
-  api:
+  fastapi:
     build:
       context: .
       dockerfile: Dockerfile.api
-    container_name: ml-api
+    container_name: ml-fastapi
     ports:
       - "8000:8000"
     volumes:
-      # Mount model artifacts (read-only for security)
-      - ./models:/app/models:ro
-      # Mount logs directory
+      # model artifacts (read-only)
+      - ./models/production:/app/models/production:ro
+      # logs (read-write)
       - ./logs:/app/logs
     environment:
-      - MODEL_PATH=/app/models/production
-      - LOG_LEVEL=info
-      - WORKERS=2
+      LOG_LEVEL: info
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      # check the port is listening (no curl needed)
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1',8000)); s.close()"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     restart: unless-stopped
-    networks:
-      - ml-network
-    # Resource limits (adjust based on your needs)
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
 
-  # ==========================================
-  # Streamlit Web Application
-  # ==========================================
   streamlit:
     build:
       context: .
@@ -59,82 +38,24 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      # Mount model artifacts (read-only)
-      - ./models:/app/models:ro
-      # Mount logs directory
+      # model artifacts (read-only)
+      - ./models/production:/app/models/production:ro
+      # logs (read-write)
       - ./logs:/app/logs
     environment:
-      - MODEL_PATH=/app/models/production
-      - API_URL=http://api:8000
-    depends_on:
-      api:
-        condition: service_healthy
+      MODEL_PATH: /app/models/production
+      LOG_LEVEL: info
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      # check the port is listening (no curl needed)
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1',8501)); s.close()"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     restart: unless-stopped
-    networks:
-      - ml-network
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
-
-  # ==========================================
-  # MLflow Tracking Server (Optional)
-  # ==========================================
-  mlflow:
-    image: python:3.9-slim
-    container_name: ml-mlflow
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./mlruns:/mlflow/mlruns
-      - ./mlflow.db:/mlflow/mlflow.db
-    command: >
-      sh -c "
-        pip install mlflow==2.15.1 &&
-        mlflow server
-        --backend-store-uri sqlite:////mlflow/mlflow.db
-        --default-artifact-root /mlflow/mlruns
-        --host 0.0.0.0
-        --port 5000
-      "
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    restart: unless-stopped
-    networks:
-      - ml-network
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 1G
-
-# ==========================================
-# Networks
-# ==========================================
-networks:
-  ml-network:
-    driver: bridge
-    name: ml-network
-
-# ==========================================
-# Volumes (for persistent data)
-# ==========================================
-volumes:
-  model-artifacts:
-    driver: local
-  mlflow-data:
-    driver: local
