@@ -22,7 +22,7 @@ install:
 
 lint:
 	$(PYTHON) -m flake8 $(SRC_PATHS)
-
+	$(PYTHON) -m pylint $(SRC_PATHS)
 format:
 	$(PYTHON) -m black $(SRC_PATHS)
 	$(PYTHON) -m isort $(SRC_PATHS)

@@ -5,9 +5,10 @@ This script loads the best trained model and preprocessor to make predictions
 on new data.
 """
 
+import pickle
 import sys
 from pathlib import Path
-import pickle
+
 import numpy as np
 import pandas as pd
 
