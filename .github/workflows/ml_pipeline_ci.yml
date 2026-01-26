@@ -36,7 +36,7 @@ jobs:
 
       - name: Import sort check (isort)
         run: |
-          python -m isort --check-only src app.py predict.py
+          isort --check-only src app.py predict.py
 
       - name: Lint (flake8)
         run: |

@@ -26,7 +26,7 @@ lint:
 
 format:
 	$(PYTHON) -m black $(SRC)
-	$(PYTHON) -m isort $(SRC)
+	isort $(SRC)
 
 test:
 	@if [ -n "$(TEST_DIR)" ]; then $(PYTHON) -m pytest $(TEST_DIR) -v; else echo "No test/ or tests/ directory found."; fi
