@@ -14,5 +14,3 @@ mlflow.db
 feature_names.json
 mlruns/
 __init__.py
-AWSCLIV2.pkg
-pytest_cache/
