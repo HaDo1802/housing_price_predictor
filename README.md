@@ -4,6 +4,14 @@
 <img src="image/image.png" alt="Real Estate Data Pipeline Cover Image" />
 </p>
 
+## 🚀 Live App
+
+You can interact with the live app here (allow ~30 seconds for the Space to start):
+
+```text
+https://huggingface.co/spaces/HaDo1802/housing-predictor
+```
+
 An end-to-end **production-oriented machine learning pipeline** for predicting housing prices using the Ames Housing dataset.  
 This project demonstrates **correct MLOps principles**, including data leakage prevention, train/validation/test separation, experiment tracking, reproducibility, and artifact management.
 
@@ -251,12 +259,27 @@ This project focuses on **engineering discipline**, not just accuracy:
 
 - Cross-validation
 - Model interpretability (SHAP)
-- CI/CD integration
 - Drift detection
-- API-based inference
-
 ---
 
+## 🛰️ Deploy to Hugging Face Spaces (Streamlit)
+
+Concise workflow I use:
+- Create a new Space on Hugging Face and choose the **Docker** for deployment method.
+- Create a fresh branch for deployment and keep only runtime essentials (`app.py`, `models/production`, `config`, `requirements.txt`, etc.).
+- Add the Space repo as a remote, then push the deployment branch.
+
+```bash
+git checkout -b deploy-hf
+git remote add hf <your-space-git-url>
+git push hf deploy-hf:main
+```
+
+Notes:
+- The Space build uses `requirements.txt` at the repo root.
+- The Streamlit entrypoint should be `app.py` at the repo root.
+
+---
 
 ## 👤 Author
 
