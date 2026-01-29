@@ -4,7 +4,7 @@ STRUCTURE.md
 EXAMPLES.md 
 *.pyc
 *.pyo
-.env/
+.env
 .venv/
 __pycache__/
 .ipynb_checkpoints/
