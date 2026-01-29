@@ -15,9 +15,13 @@ Usage:
     streamlit run app.py
 """
 
+import json
 import logging
 import sys
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -29,6 +33,7 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent))
 
 from config.config_manager import ConfigManager
+from src.monitoring.feedback_collector import save_feedback_record
 from src.pipelines.inference_pipeline import InferencePipeline
 
 # Configure logging
@@ -507,6 +512,96 @@ def display_prediction_results(prediction, lower, upper, top_features):
     )
 
 
+def build_feedback_record(
+    inputs: dict,
+    prediction_id: str,
+    prediction: float,
+    lower: float,
+    upper: float,
+    agree: bool,
+    suggested_min: Optional[float],
+    suggested_max: Optional[float],
+) -> dict:
+    """Build a feedback record for storage"""
+    return {
+        "feedback_id": str(uuid.uuid4()),
+        "prediction_id": prediction_id,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "agree_with_prediction": agree,
+        "predicted_price": float(prediction),
+        "lower_bound": float(lower),
+        "upper_bound": float(upper),
+        "suggested_min": suggested_min,
+        "suggested_max": suggested_max,
+        "input_features": json.dumps(inputs),
+    }
+
+
+def render_feedback_form(inputs: dict, result: dict) -> None:
+    """Render feedback collection UI and persist feedback"""
+    st.markdown("## 📝 Feedback")
+    st.markdown(
+        "Do you agree with the prediction? Your feedback helps improve the model."
+    )
+
+    agree_choice = st.radio(
+        "Do you agree with the prediction?",
+        options=["Yes, I agree", "No, I disagree"],
+        horizontal=True,
+        key="feedback_agree_choice",
+    )
+
+    suggested_min = None
+    suggested_max = None
+
+    if agree_choice == "No, I disagree":
+        st.markdown("What price range do you believe is more accurate?")
+        col1, col2 = st.columns(2)
+        with col1:
+            suggested_min = st.number_input(
+                "Suggested minimum price",
+                min_value=0.0,
+                value=0.0,
+                step=1000.0,
+                key="suggested_min_price",
+            )
+        with col2:
+            suggested_max = st.number_input(
+                "Suggested maximum price",
+                min_value=0.0,
+                value=0.0,
+                step=1000.0,
+                key="suggested_max_price",
+            )
+
+    if st.button("Submit feedback"):
+        agree = agree_choice == "Yes, I agree"
+
+        if not agree:
+            if suggested_min is None or suggested_max is None:
+                st.error("Please provide a suggested price range.")
+                return
+            if suggested_min <= 0 or suggested_max <= 0:
+                st.error("Suggested range must be greater than 0.")
+                return
+            if suggested_min > suggested_max:
+                st.error("Suggested minimum must be less than or equal to maximum.")
+                return
+
+        record = build_feedback_record(
+            inputs=inputs,
+            prediction_id=result["prediction_id"],
+            prediction=result["prediction"],
+            lower=result["lower"],
+            upper=result["upper"],
+            agree=agree,
+            suggested_min=suggested_min if not agree else None,
+            suggested_max=suggested_max if not agree else None,
+        )
+        save_feedback_record(record)
+        st.success("✅ Thanks! Your feedback has been recorded.")
+
+
 def main():
     """Main application logic"""
 
@@ -618,32 +713,54 @@ def main():
                     # Get feature importance
                     top_features = pipeline.get_feature_importance(top_n=5)
 
-                    # Display results
-                    display_prediction_results(prediction, lower, upper, top_features)
-
-                    # Success message
-                    st.success("✅ Prediction completed successfully!")
-
-                    # Download button for results
-                    results_data = {
-                        "Predicted Price": [f"${prediction:,.0f}"],
-                        "Lower Bound (95% CI)": [f"${lower:,.0f}"],
-                        "Upper Bound (95% CI)": [f"${upper:,.0f}"],
-                        "Margin of Error": [f"${(upper - lower) / 2:,.0f}"],
+                    st.session_state.last_result = {
+                        "prediction_id": str(uuid.uuid4()),
+                        "prediction": float(prediction),
+                        "lower": float(lower),
+                        "upper": float(upper),
+                        "top_features": top_features,
                     }
-                    results_df = pd.DataFrame(results_data)
-
-                    csv = results_df.to_csv(index=False)
-                    st.download_button(
-                        label="📥 Download Prediction Results",
-                        data=csv,
-                        file_name="house_price_prediction.csv",
-                        mime="text/csv",
-                    )
+                    st.session_state.last_inputs = inputs
 
                 except Exception as e:
                     st.error(f"❌ Error making prediction: {str(e)}")
                     logger.error(f"Prediction error: {str(e)}", exc_info=True)
+
+    if "last_result" in st.session_state and "last_inputs" in st.session_state:
+        result = st.session_state.last_result
+        last_inputs = st.session_state.last_inputs
+
+        # Display results
+        display_prediction_results(
+            result["prediction"],
+            result["lower"],
+            result["upper"],
+            result["top_features"],
+        )
+
+        # Success message
+        st.success("✅ Prediction completed successfully!")
+
+        # Download button for results
+        results_data = {
+            "Predicted Price": [f"${result['prediction']:,.0f}"],
+            "Lower Bound (95% CI)": [f"${result['lower']:,.0f}"],
+            "Upper Bound (95% CI)": [f"${result['upper']:,.0f}"],
+            "Margin of Error": [f"${(result['upper'] - result['lower']) / 2:,.0f}"],
+        }
+        results_df = pd.DataFrame(results_data)
+
+        csv = results_df.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Prediction Results",
+            data=csv,
+            file_name="house_price_prediction.csv",
+            mime="text/csv",
+        )
+
+        # Feedback collection
+        st.markdown("---")
+        render_feedback_form(last_inputs, result)
 
     # Footer
     st.markdown("---")
