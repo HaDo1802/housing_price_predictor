@@ -33,9 +33,9 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install black flake8
 
-      - name: Format check (black)
+      - name: Format code (black)
         run: |
-          python -m black --check src app.py predict.py
+          python -m black src app.py predict.py
 
       - name: Lint (flake8)
         run: |

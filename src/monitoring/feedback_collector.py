@@ -7,7 +7,9 @@ from typing import Dict
 import pandas as pd
 
 
-def save_feedback_record(record: Dict, output_path: str = "data/feedback/feedback.csv") -> None:
+def save_feedback_record(
+    record: Dict, output_path: str = "data/feedback/feedback.csv"
+) -> None:
     """Append a feedback record to a CSV file."""
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
