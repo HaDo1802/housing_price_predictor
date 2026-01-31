@@ -193,6 +193,23 @@ def request_prediction(payload: dict) -> dict:
         raise RuntimeError("Prediction service is unavailable") from exc
 
 
+def request_file_prediction(file_name: str, file_bytes: bytes, mime_type: str) -> bytes:
+    """Call FastAPI file prediction endpoint and return CSV bytes"""
+    url = f"{API_BASE_URL}/predict/file"
+    files = {"file": (file_name, file_bytes, mime_type or "application/octet-stream")}
+    try:
+        response = requests.post(url, files=files, timeout=60)
+        if response.status_code == 200:
+            return response.content
+        logger.error(
+            "File prediction request failed: %s - %s", response.status_code, response.text
+        )
+        raise RuntimeError(response.text)
+    except requests.RequestException as exc:
+        logger.error("File prediction request error: %s", exc)
+        raise RuntimeError("Prediction service is unavailable") from exc
+
+
 def validate_inputs(inputs: dict, required_features: list) -> tuple:
     """
     Validate user inputs.
@@ -717,6 +734,44 @@ def main():
 
     # Main content
     inputs, required_features = create_input_form(config)
+
+    st.markdown("---")
+    st.markdown("## 📂 Batch Predictions (CSV/Excel)")
+    st.markdown(
+        "Upload a CSV or Excel file with the same feature columns to get predictions for multiple rows."
+    )
+
+    uploaded_file = st.file_uploader(
+        "Upload file",
+        type=["csv", "xlsx", "xls"],
+        help="Accepted formats: CSV, XLSX, XLS",
+    )
+
+    if uploaded_file is not None:
+        file_bytes = uploaded_file.getvalue()
+        file_name = uploaded_file.name
+        mime_type = uploaded_file.type or "application/octet-stream"
+
+        st.info(f"Selected file: {file_name}")
+        if st.button("🚀 Run Batch Prediction", type="primary"):
+            with st.spinner("🔄 Processing file..."):
+                try:
+                    output_csv = request_file_prediction(
+                        file_name=file_name,
+                        file_bytes=file_bytes,
+                        mime_type=mime_type,
+                    )
+                    output_name = f"{Path(file_name).stem}_predictions.csv"
+                    st.success("✅ Batch predictions completed!")
+                    st.download_button(
+                        label="📥 Download Predictions CSV",
+                        data=output_csv,
+                        file_name=output_name,
+                        mime="text/csv",
+                    )
+                except Exception as e:
+                    st.error(f"❌ Batch prediction failed: {str(e)}")
+                    logger.error("Batch prediction error: %s", e, exc_info=True)
 
     # Predict button
     st.markdown("---")
