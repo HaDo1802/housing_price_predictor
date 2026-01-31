@@ -17,6 +17,7 @@ Usage:
 
 import json
 import logging
+import os
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -27,6 +28,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import requests
 import streamlit as st
 
 # Add src to path
@@ -34,11 +36,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from config.config_manager import ConfigManager
 from src.monitoring.feedback_collector import save_feedback_record
-from src.pipelines.inference_pipeline import InferencePipeline
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 
 
 # Page configuration
@@ -113,17 +116,6 @@ st.markdown(
 
 
 @st.cache_resource
-def load_pipeline():
-    """Load the inference pipeline (cached to avoid reloading)"""
-    try:
-        pipeline = InferencePipeline("models/production")
-        return pipeline
-    except Exception as e:
-        st.error(f"Error loading model: {str(e)}")
-        st.stop()
-
-
-@st.cache_resource
 def load_config():
     """Load configuration (cached)"""
     try:
@@ -132,6 +124,73 @@ def load_config():
     except Exception as e:
         st.error(f"Error loading configuration: {str(e)}")
         st.stop()
+
+@st.cache_data(ttl=60)
+def fetch_model_info():
+    """Fetch model metadata from the FastAPI service"""
+    url = f"{API_BASE_URL}/model/info"
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        logger.warning(
+            "Model info request failed: %s - %s", response.status_code, response.text
+        )
+    except requests.RequestException as exc:
+        logger.warning("Model info request error: %s", exc)
+    return None
+
+
+def build_api_payload(inputs: dict) -> dict:
+    """Map Streamlit inputs to FastAPI payload keys"""
+    feature_map = {
+        "Lot Area": "lot_area",
+        "Total Bsmt SF": "total_bsmt_sf",
+        "1st Flr SF": "1st Flr SF",
+        "2nd Flr SF": "2nd Flr SF",
+        "Gr Liv Area": "gr_liv_area",
+        "Garage Area": "garage_area",
+        "Overall Qual": "overall_qual",
+        "Overall Cond": "overall_cond",
+        "Year Built": "year_built",
+        "Year Remod/Add": "year_remod_add",
+        "Bedroom AbvGr": "bedroom_abvgr",
+        "Full Bath": "full_bath",
+        "Half Bath": "half_bath",
+        "TotRms AbvGrd": "totrms_abvgrd",
+        "Fireplaces": "fireplaces",
+        "Garage Cars": "garage_cars",
+        "Neighborhood": "neighborhood",
+        "MS Zoning": "ms_zoning",
+        "Bldg Type": "bldg_type",
+        "House Style": "house_style",
+        "Foundation": "foundation",
+        "Central Air": "central_air",
+        "Garage Type": "garage_type",
+    }
+
+    payload = {}
+    for feature, value in inputs.items():
+        api_key = feature_map.get(feature)
+        if api_key is not None:
+            payload[api_key] = value
+    return payload
+
+
+def request_prediction(payload: dict) -> dict:
+    """Call FastAPI prediction endpoint"""
+    url = f"{API_BASE_URL}/predict"
+    try:
+        response = requests.post(url, json=payload, timeout=20)
+        if response.status_code == 200:
+            return response.json()
+        logger.error(
+            "Prediction request failed: %s - %s", response.status_code, response.text
+        )
+        raise RuntimeError(response.text)
+    except requests.RequestException as exc:
+        logger.error("Prediction request error: %s", exc)
+        raise RuntimeError("Prediction service is unavailable") from exc
 
 
 def validate_inputs(inputs: dict, required_features: list) -> tuple:
@@ -418,32 +477,35 @@ def display_prediction_results(prediction, lower, upper, top_features):
     with col2:
         st.markdown("### 🔑 Top 5 Most Important Features")
 
-        # Create horizontal bar chart for top features
-        fig = go.Figure(
-            go.Bar(
-                x=top_features["importance"].values,
-                y=top_features["feature"].values,
-                orientation="h",
-                marker=dict(
-                    color=top_features["importance"].values,
-                    colorscale="Blues",
-                    showscale=False,
-                ),
-                text=top_features["importance"].apply(lambda x: f"{x:.4f}"),
-                textposition="auto",
+        if top_features is None or top_features.empty:
+            st.info("Feature importance is not available from the API.")
+        else:
+            # Create horizontal bar chart for top features
+            fig = go.Figure(
+                go.Bar(
+                    x=top_features["importance"].values,
+                    y=top_features["feature"].values,
+                    orientation="h",
+                    marker=dict(
+                        color=top_features["importance"].values,
+                        colorscale="Blues",
+                        showscale=False,
+                    ),
+                    text=top_features["importance"].apply(lambda x: f"{x:.4f}"),
+                    textposition="auto",
+                )
             )
-        )
 
-        fig.update_layout(
-            title="Feature Importance Scores",
-            xaxis_title="Importance Score",
-            yaxis_title="Feature",
-            height=300,
-            margin=dict(l=20, r=20, t=40, b=20),
-            yaxis={"categoryorder": "total ascending"},
-        )
+            fig.update_layout(
+                title="Feature Importance Scores",
+                xaxis_title="Importance Score",
+                yaxis_title="Feature",
+                height=300,
+                margin=dict(l=20, r=20, t=40, b=20),
+                yaxis={"categoryorder": "total ascending"},
+            )
 
-        st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
 
     # Price range visualization
     st.markdown("### 📈 Price Range Visualization")
@@ -607,7 +669,6 @@ def main():
 
     # Load pipeline and config
     with st.spinner("Loading prediction model..."):
-        pipeline = load_pipeline()
         config = load_config()
 
     # Sidebar
@@ -634,8 +695,14 @@ def main():
 
         st.markdown("---")
         st.markdown("**Model Info:**")
-        st.info(f"Model: {pipeline.metadata['model_type']}")
-        st.info(f"Features: {len(pipeline.metadata['feature_names'])}")
+        model_info = fetch_model_info()
+        if model_info:
+            st.info(f"Model: {model_info.get('model_type', 'unknown')}")
+            features = model_info.get("features", {}).get("count")
+            if features is not None:
+                st.info(f"Features: {features}")
+        else:
+            st.warning("Model info unavailable. Check API connectivity.")
 
         st.markdown("---")
         st.markdown("**Need Help?**")
@@ -698,20 +765,15 @@ def main():
             # Make prediction
             with st.spinner("🔄 Calculating prediction..."):
                 try:
-                    # Convert inputs to dataframe
-                    input_df = pd.DataFrame([inputs])
+                    payload = build_api_payload(inputs)
+                    response = request_prediction(payload)
 
-                    # Get prediction with uncertainty
-                    predictions, lower_bounds, upper_bounds = (
-                        pipeline.predict_with_uncertainty(input_df)
-                    )
-
-                    prediction = predictions[0]
-                    lower = prediction + lower_bounds[0]
-                    upper = prediction + upper_bounds[0]
-
-                    # Get feature importance
-                    top_features = pipeline.get_feature_importance(top_n=5)
+                    prediction = response["prediction"]
+                    lower = response["confidence_interval"]["lower"]
+                    upper = response["confidence_interval"]["upper"]
+                    top_features = response.get("top_features")
+                    if top_features is not None:
+                        top_features = pd.DataFrame(top_features)
 
                     st.session_state.last_result = {
                         "prediction_id": str(uuid.uuid4()),

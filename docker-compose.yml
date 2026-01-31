@@ -80,6 +80,7 @@ services:
     environment:
       MODEL_PATH: /app/models/production
       LOG_LEVEL: info
+      API_BASE_URL: http://fastapi:8000
     healthcheck:
       # check the port is listening (no curl needed)
       test:

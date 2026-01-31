@@ -5,14 +5,16 @@ Production-ready API for housing price predictions.
 Includes: health checks, model versioning, error handling, request validation.
 """
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, validator
 from typing import Dict, Optional, List
 import logging
 from pathlib import Path
 import sys
+import io
 
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -123,6 +125,9 @@ class PredictionResponse(BaseModel):
     prediction: float = Field(..., description="Predicted sale price in USD")
     confidence_interval: Dict[str, float] = Field(..., description="95% confidence interval")
     model_version: str = Field(..., description="Model version used")
+    top_features: Optional[List["FeatureImportance"]] = Field(
+        None, description="Top feature importance scores"
+    )
     
     class Config:
         schema_extra = {
@@ -132,9 +137,22 @@ class PredictionResponse(BaseModel):
                     "lower": 175000.00,
                     "upper": 215000.00
                 },
-                "model_version": "production_v1.0"
+                "model_version": "production_v1.0",
+                "top_features": [
+                    {"feature": "Overall Qual", "importance": 0.25},
+                    {"feature": "Gr Liv Area", "importance": 0.18},
+                    {"feature": "Neighborhood", "importance": 0.11},
+                    {"feature": "Total Bsmt SF", "importance": 0.08},
+                    {"feature": "Year Built", "importance": 0.06}
+                ]
             }
         }
+
+
+class FeatureImportance(BaseModel):
+    """Feature importance entry"""
+    feature: str
+    importance: float
 
 
 class BatchPredictionRequest(BaseModel):
@@ -159,6 +177,48 @@ class ErrorResponse(BaseModel):
     """Error response"""
     error: str
     detail: Optional[str] = None
+
+def _features_to_dataframe(features_list: List[HouseFeatures]):
+    """Convert a list of HouseFeatures to a DataFrame with model column names."""
+    rows = []
+    for features in features_list:
+        rows.append(
+            {
+                "Lot Area": features.lot_area,
+                "Total Bsmt SF": features.total_bsmt_sf,
+                "1st Flr SF": features.first_flr_sf,
+                "2nd Flr SF": features.second_flr_sf,
+                "Gr Liv Area": features.gr_liv_area,
+                "Garage Area": features.garage_area,
+                "Overall Qual": features.overall_qual,
+                "Overall Cond": features.overall_cond,
+                "Year Built": features.year_built,
+                "Year Remod/Add": features.year_remod_add,
+                "Bedroom AbvGr": features.bedroom_abvgr,
+                "Full Bath": features.full_bath,
+                "Half Bath": features.half_bath,
+                "TotRms AbvGrd": features.totrms_abvgrd,
+                "Fireplaces": features.fireplaces,
+                "Garage Cars": features.garage_cars,
+                "Neighborhood": features.neighborhood,
+                "MS Zoning": features.ms_zoning,
+                "Bldg Type": features.bldg_type,
+                "House Style": features.house_style,
+                "Foundation": features.foundation,
+                "Central Air": features.central_air,
+                "Garage Type": features.garage_type,
+            }
+        )
+    import pandas as pd
+    return pd.DataFrame(rows)
+
+
+def _get_top_features():
+    """Fetch top features if available."""
+    try:
+        return inference_pipeline.get_feature_importance(top_n=5).to_dict("records")
+    except Exception:
+        return None
 
 
 # ==========================================
@@ -273,6 +333,7 @@ async def predict(features: HouseFeatures):
         prediction = float(predictions[0])
         lower = float(prediction + lower_bounds[0])
         upper = float(prediction + upper_bounds[0])
+        top_features = _get_top_features()
         
         logger.info(f"Prediction made: ${prediction:,.2f}")
         
@@ -282,7 +343,8 @@ async def predict(features: HouseFeatures):
                 "lower": lower,
                 "upper": upper
             },
-            model_version="production_v1.0"
+            model_version="production_v1.0",
+            top_features=top_features
         )
         
     except Exception as e:
@@ -312,50 +374,21 @@ async def predict_batch(request: BatchPredictionRequest):
         )
     
     try:
+        df = _features_to_dataframe(request.features)
+        preds, lower_bounds, upper_bounds = inference_pipeline.predict_with_uncertainty(df)
+        top_features = _get_top_features()
+
         predictions_list = []
-        
-        for features in request.features:
-            # Convert features (similar to single prediction)
-            feature_dict = {
-                'Lot Area': features.lot_area,
-                'Total Bsmt SF': features.total_bsmt_sf,
-                '1st Flr SF': features.first_flr_sf,
-                '2nd Flr SF': features.second_flr_sf,
-                'Gr Liv Area': features.gr_liv_area,
-                'Garage Area': features.garage_area,
-                'Overall Qual': features.overall_qual,
-                'Overall Cond': features.overall_cond,
-                'Year Built': features.year_built,
-                'Year Remod/Add': features.year_remod_add,
-                'Bedroom AbvGr': features.bedroom_abvgr,
-                'Full Bath': features.full_bath,
-                'Half Bath': features.half_bath,
-                'TotRms AbvGrd': features.totrms_abvgrd,
-                'Fireplaces': features.fireplaces,
-                'Garage Cars': features.garage_cars,
-                'Neighborhood': features.neighborhood,
-                'MS Zoning': features.ms_zoning,
-                'Bldg Type': features.bldg_type,
-                'House Style': features.house_style,
-                'Foundation': features.foundation,
-                'Central Air': features.central_air,
-                'Garage Type': features.garage_type
-            }
-            
-            import pandas as pd
-            df = pd.DataFrame([feature_dict])
-            
-            preds, lower_bounds, upper_bounds = inference_pipeline.predict_with_uncertainty(df)
-            
-            prediction = float(preds[0])
-            lower = float(prediction + lower_bounds[0])
-            upper = float(prediction + upper_bounds[0])
-            
+        for i in range(len(df)):
+            prediction = float(preds[i])
+            lower = float(prediction + lower_bounds[i])
+            upper = float(prediction + upper_bounds[i])
             predictions_list.append(
                 PredictionResponse(
                     prediction=prediction,
                     confidence_interval={"lower": lower, "upper": upper},
-                    model_version="production_v1.0"
+                    model_version="production_v1.0",
+                    top_features=top_features,
                 )
             )
         
@@ -405,6 +438,71 @@ async def model_info():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve model info: {str(e)}"
+        )
+
+
+@app.post(
+    "/predict/file",
+    status_code=status.HTTP_200_OK,
+    tags=["Prediction"]
+)
+async def predict_file(file: UploadFile = File(...)):
+    """
+    Make batch predictions from an uploaded CSV or Excel file.
+
+    Returns a CSV file with prediction columns appended.
+    """
+    if inference_pipeline is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Model not loaded. Please try again later."
+        )
+
+    filename = file.filename or "input"
+    try:
+        contents = await file.read()
+        import pandas as pd
+
+        if filename.lower().endswith(".csv"):
+            df = pd.read_csv(io.BytesIO(contents))
+        elif filename.lower().endswith((".xlsx", ".xls")):
+            df = pd.read_excel(io.BytesIO(contents))
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unsupported file type. Upload CSV or Excel."
+            )
+
+        # Validate expected features
+        inference_pipeline._validate_input(df)
+
+        preds, lower_bounds, upper_bounds = inference_pipeline.predict_with_uncertainty(df)
+
+        df_out = df.copy()
+        df_out["prediction"] = preds
+        df_out["lower_bound"] = preds + lower_bounds
+        df_out["upper_bound"] = preds + upper_bounds
+
+        output = io.StringIO()
+        df_out.to_csv(output, index=False)
+        output.seek(0)
+
+        output_filename = f"{Path(filename).stem}_predictions.csv"
+        headers = {
+            "Content-Disposition": f'attachment; filename="{output_filename}"'
+        }
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers=headers
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"File prediction error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"File prediction failed: {str(e)}"
         )
 
 

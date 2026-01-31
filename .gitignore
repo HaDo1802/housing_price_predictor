@@ -16,3 +16,4 @@ mlruns/
 __init__.py
 AWSCLIV2.pkg
 pytest_cache/
+learning.md
