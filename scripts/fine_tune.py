@@ -5,7 +5,7 @@ Automatically runs multiple experiments with different hyperparameters
 and logs everything to MLflow for comparison.
 
 Usage:
-    python scripts/hyperparameter_search.py
+    python scripts/fine_tune.py
 
 Then view results:
     mlflow ui
@@ -19,7 +19,7 @@ from pathlib import Path
 import yaml
 
 # Add project to path
-sys.path.append(str(Path(__file__).parent.parent.parent))
+sys.path.append(str(Path(__file__).parent.parent))
 
 import mlflow
 

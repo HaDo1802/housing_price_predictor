@@ -70,8 +70,10 @@ housing_price_predictor/
 │   └── pipelines/                  # Script that compile others sub-sripts to built full pipelines
 │       ├── training_pipeline.py    # Modular script handle training pipeline: load, cleaning, split, features engineer, & train
 │       ├── inference_pipeline.py   # Modular script handle inference pipeline
-│       ├── fine_tune.py            # Modular script handle fine-tune/ hyperparameter seach
 │      
+├── scripts/                        # Operational scripts (training runs, tuning, utilities)
+│   └── fine_tune.py                # Modular script handle fine-tune/ hyperparameter search
+│
 │
 ├── models/                         # Saved model / artifacts / metadata
 │   └── production/                             
