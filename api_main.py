@@ -231,7 +231,10 @@ async def startup_event():
     global inference_pipeline
     try:
         logger.info("Loading inference pipeline...")
-        inference_pipeline = InferencePipeline('models/production')
+        inference_pipeline = InferencePipeline(
+            model_name="housing_price_predictor",
+            stage="Production",
+        )
         logger.info("✓ Inference pipeline loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load inference pipeline: {e}")
