@@ -25,26 +25,26 @@ features:
     # - '2nd Flr SF'
     # - 'Gr Liv Area'
     # - 'Garage Area'
-    - 'Overall Qual'
-    - 'Overall Cond'
-    - 'Year Built'
-    - 'Year Remod/Add'
-    - 'Bedroom AbvGr'
-    - 'Full Bath'
+    - "Overall Qual"
+    - "Overall Cond"
+    - "Year Built"
+    - "Year Remod/Add"
+    - "Bedroom AbvGr"
+    - "Full Bath"
     # - 'Half Bath'
     # - 'TotRms AbvGrd'
     # - 'Fireplaces'
     # - 'Garage Cars'
-    
+
   categorical:
-    - 'Neighborhood'
-    - 'MS Zoning'
-    - 'Bldg Type'
+    - "Neighborhood"
+    - "MS Zoning"
+    - "Bldg Type"
     # - 'House Style'
     # - 'Foundation'
     # - 'Central Air'
     # - 'Garage Type'
-  
+
   # exclude:
   #   - 'Order'
   #   - 'PID'
@@ -61,7 +61,7 @@ preprocessing:
 model:
   model_type: "gradient_boosting"
   random_state: 42
-  
+
   hyperparameters:
     n_estimators: 100
     learning_rate: 0.1
@@ -72,6 +72,6 @@ model:
 
 # Training Configuration
 training:
-  experiment_name: "house_price_prediction_test"
+  experiment_name: "house_price_prediction_test_2"
   run_name: "baseline_gradient_boosting"
   model_output_dir: "models/production"

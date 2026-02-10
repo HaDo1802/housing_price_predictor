@@ -17,3 +17,5 @@ __init__.py
 AWSCLIV2.pkg
 pytest_cache/
 learning.md
+.pytest_cache/
+.ipynb_checkpoints/
