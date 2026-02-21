@@ -7,7 +7,7 @@ PIP ?= $(PYTHON) -m pip
 SRC := src app.py predict.py
 TEST_DIR := tests
 
-.PHONY: help install lint format test clean all
+.PHONY: help install lint format test clean all vercel-preview vercel-prod
 
 help:
 	@printf "Targets:\\n"
@@ -15,6 +15,8 @@ help:
 	@printf "  lint     Run flake8\\n"
 	@printf "  format   Run black + isort\\n"
 	@printf "  test     Run pytest if a test dir exists\\n"
+	@printf "  vercel-preview Deploy FastAPI to Vercel preview\\n"
+	@printf "  vercel-prod    Deploy FastAPI to Vercel production\\n"
 	
 install:
 	$(PIP) install --upgrade pip
@@ -32,3 +34,9 @@ test:
 
 
 all: install format lint test
+
+vercel-preview:
+	vercel --yes
+
+vercel-prod:
+	vercel --prod --yes

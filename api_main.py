@@ -16,8 +16,10 @@ from pathlib import Path
 import sys
 import io
 
-# Add project to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add project root to path for both local runs and serverless imports
+PROJECT_ROOT = Path(__file__).resolve().parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.pipelines.inference_pipeline import InferencePipeline
 
