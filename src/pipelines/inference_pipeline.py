@@ -7,6 +7,7 @@ Falls back to local model files when MLflow is unavailable (e.g. Vercel, Hugging
 
 import json
 import logging
+import os
 import pickle
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -17,7 +18,9 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 # Local artifact directory (used when MLflow is unavailable)
-LOCAL_MODEL_DIR = Path(__file__).resolve().parent.parent / "models" / "production"
+# src/pipelines/inference_pipeline.py -> project root is parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+LOCAL_MODEL_DIR = PROJECT_ROOT / "models" / "production"
 
 
 class InferencePipeline:
@@ -40,7 +43,15 @@ class InferencePipeline:
         self.model_name = model_name
         self.stage = stage
         self.version = str(version) if version is not None else None
-        self.local_model_dir = Path(local_model_dir) if local_model_dir else LOCAL_MODEL_DIR
+        env_model_dir = os.getenv("MODEL_ARTIFACT_DIR")
+        if local_model_dir:
+            self.local_model_dir = Path(local_model_dir)
+        elif env_model_dir:
+            self.local_model_dir = Path(env_model_dir)
+        else:
+            self.local_model_dir = LOCAL_MODEL_DIR
+        if not self.local_model_dir.is_absolute():
+            self.local_model_dir = PROJECT_ROOT / self.local_model_dir
         self._loaded_from = None  # "mlflow" or "local"
 
         self.model = None

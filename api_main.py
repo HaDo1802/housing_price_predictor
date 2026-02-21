@@ -240,8 +240,8 @@ async def startup_event():
         logger.info("✓ Inference pipeline loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load inference pipeline: {e}")
-        # In production, you might want to fail fast here
-        raise
+        # Keep API alive for diagnostics; prediction endpoints will return 503.
+        inference_pipeline = None
 
 
 @app.on_event("shutdown")
