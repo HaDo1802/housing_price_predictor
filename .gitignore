@@ -19,3 +19,4 @@ pytest_cache/
 learning.md
 .pytest_cache/
 .ipynb_checkpoints/
+.vercel
