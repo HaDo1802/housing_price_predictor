@@ -119,7 +119,7 @@ class TrainingPipeline:
 
         return output_path
 
-    def run(self) -> dict:
+    def run(self, register_model: bool = False) -> dict:
         mlflow.set_experiment(self.config.training.experiment_name)
 
         with mlflow.start_run(run_name=self.config.training.run_name):
@@ -172,12 +172,17 @@ class TrainingPipeline:
                     json.dump(self.preprocessor.get_feature_names(), f)
                 mlflow.log_artifacts(str(tmp_path))
 
-            run_id = mlflow.active_run().info.run_id
-            model_version = self.registry.register_model(run_id)
-            self.registry.auto_promote_if_better(
-                new_model_version=model_version,
-                new_test_r2=self.metrics["test"]["r2"],
-            )
+            if register_model:
+                run_id = mlflow.active_run().info.run_id
+                model_version = self.registry.register_model(
+                    run_id,
+                    model_type=type(self.model).__name__,
+                    model_key=self.config.model.model_type,
+                )
+                self.registry.auto_promote_if_better(
+                    new_model_version=model_version,
+                    new_test_r2=self.metrics["test"]["r2"],
+                )
 
             backup_path = self.save_artifacts()
             logger.info("Local experiment backup path: %s", backup_path)
