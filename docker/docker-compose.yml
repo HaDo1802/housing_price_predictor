@@ -2,6 +2,7 @@ version: "3.8"
 
 services:
   fastapi:
+    image: ml-fastapi:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile.api
@@ -16,6 +17,7 @@ services:
     restart: unless-stopped
 
   streamlit:
+    image: ml-streamlit:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile.streamlit

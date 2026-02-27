@@ -20,7 +20,11 @@ router = APIRouter(prefix="/predict", tags=["Prediction"])
 
 def _features_to_row(features):
     data = features.model_dump(by_alias=False)
-    return {model_key: data[api_key] for api_key, model_key in API_TO_MODEL_FIELDS.items()}
+    return {
+        model_key: data[api_key]
+        for api_key, model_key in API_TO_MODEL_FIELDS.items()
+        if api_key in data and data[api_key] is not None
+    }
 
 
 def _get_top_features(pipeline):

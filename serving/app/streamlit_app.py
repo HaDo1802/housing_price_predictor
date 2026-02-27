@@ -33,7 +33,11 @@ import streamlit as st
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
+SRC_ROOT = PROJECT_ROOT / "src"
+for p in (PROJECT_ROOT, SRC_ROOT):
+    p_str = str(p)
+    if p_str not in sys.path:
+        sys.path.insert(0, p_str)
 
 from housing_predictor.config_manager import ConfigManager
 from housing_predictor.monitoring.feedback_collector import save_feedback_record
@@ -45,7 +49,9 @@ logger = logging.getLogger(__name__)
 from dotenv import load_dotenv
 
 load_dotenv(PROJECT_ROOT / ".env")
-API_BASE_URL = os.getenv("API_BASE_URL", "https://realestatepredictor.vercel.app").rstrip("/")
+DEFAULT_API_BASE_URL = os.getenv(
+    "API_BASE_URL", "https://realestatepredictor.vercel.app"
+).rstrip("/")
 
 
 # Page configuration
@@ -130,9 +136,9 @@ def load_config():
         st.stop()
 
 @st.cache_data(ttl=60)
-def fetch_model_info():
+def fetch_model_info(base_url: str):
     """Fetch model metadata from the FastAPI service"""
-    url = f"{API_BASE_URL}/model/info"
+    url = f"{base_url.rstrip('/')}/model/info"
     try:
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
@@ -146,9 +152,9 @@ def fetch_model_info():
 
 
 @st.cache_data(ttl=30)
-def fetch_api_health():
+def fetch_api_health(base_url: str):
     """Fetch API health status for clearer diagnostics."""
-    url = f"{API_BASE_URL}/health"
+    url = f"{base_url.rstrip('/')}/health"
     try:
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
@@ -156,6 +162,45 @@ def fetch_api_health():
     except requests.RequestException:
         return None
     return None
+
+
+def _api_base_url_candidates() -> list[str]:
+    """Return candidate API base URLs ordered by runtime likelihood."""
+    in_docker = Path("/.dockerenv").exists()
+    candidates = []
+
+    if DEFAULT_API_BASE_URL:
+        candidates.append(DEFAULT_API_BASE_URL.rstrip("/"))
+
+    if in_docker:
+        candidates.extend(["http://fastapi:8000", "http://localhost:8000"])
+    else:
+        candidates.extend(["http://localhost:8000", "http://127.0.0.1:8000"])
+
+    # Keep order, drop duplicates.
+    deduped = []
+    seen = set()
+    for url in candidates:
+        if url not in seen:
+            deduped.append(url)
+            seen.add(url)
+    return deduped
+
+
+@st.cache_data(ttl=30)
+def resolve_api_base_url():
+    """Find the first reachable API endpoint."""
+    candidates = _api_base_url_candidates()
+    for candidate in candidates:
+        health = fetch_api_health(candidate)
+        if health is not None:
+            return candidate, candidates, health
+    return None, candidates, None
+
+
+def get_active_api_base_url() -> str:
+    """Get currently selected API URL from session state."""
+    return st.session_state.get("api_base_url") or DEFAULT_API_BASE_URL
 
 
 def build_api_payload(inputs: dict) -> dict:
@@ -196,7 +241,7 @@ def build_api_payload(inputs: dict) -> dict:
 
 def request_prediction(payload: dict) -> dict:
     """Call FastAPI prediction endpoint"""
-    url = f"{API_BASE_URL}/predict"
+    url = f"{get_active_api_base_url().rstrip('/')}/predict"
     try:
         response = requests.post(url, json=payload, timeout=20)
         if response.status_code == 200:
@@ -212,7 +257,7 @@ def request_prediction(payload: dict) -> dict:
 
 def request_file_prediction(file_name: str, file_bytes: bytes, mime_type: str) -> bytes:
     """Call FastAPI file prediction endpoint and return CSV bytes"""
-    url = f"{API_BASE_URL}/predict/file"
+    url = f"{get_active_api_base_url().rstrip('/')}/predict/file"
     files = {"file": (file_name, file_bytes, mime_type or "application/octet-stream")}
     try:
         response = requests.post(url, files=files, timeout=60)
@@ -726,10 +771,18 @@ def main():
 
         st.markdown("---")
         st.markdown("**Model Info:**")
-        st.caption(f"API URL: `{API_BASE_URL}`")
-        health = fetch_api_health()
+        resolved_url, candidates, health = resolve_api_base_url()
+        if resolved_url:
+            st.session_state.api_base_url = resolved_url
+
+        active_url = get_active_api_base_url()
+        st.caption(f"API URL: `{active_url}`")
+
         if health is None:
             st.error("API is unreachable. Start FastAPI or fix `API_BASE_URL`.")
+            st.caption(
+                "Tried: " + ", ".join(f"`{url}`" for url in candidates)
+            )
             model_info = None
         elif not health.get("model_loaded", False):
             st.warning("API is running, but model is not loaded on startup.")
@@ -738,7 +791,7 @@ def main():
                 st.caption(f"Load error: {load_error}")
             model_info = None
         else:
-            model_info = fetch_model_info()
+            model_info = fetch_model_info(active_url)
         if model_info:
             st.info(f"Model: {model_info.get('model_type', 'unknown')}")
             features = model_info.get("features", {}).get("count")
