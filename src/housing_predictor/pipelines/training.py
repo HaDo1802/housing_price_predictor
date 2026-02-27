@@ -8,12 +8,18 @@ from pathlib import Path
 
 import mlflow
 import mlflow.sklearn
+from mlflow.tracking import MlflowClient
 
 from housing_predictor.config_manager import ConfigManager
 from housing_predictor.data.loader import load_dataframe
 from housing_predictor.data.splitter import DataSplitter
 from housing_predictor.features.preprocessor import ProductionPreprocessor
+from housing_predictor.models.check_metric import check_metric_against_production
 from housing_predictor.models.evaluator import regression_metrics
+from housing_predictor.models.promote import (
+    promote_model_version,
+    save_local_production_from_objects,
+)
 from housing_predictor.models.registry import ModelRegistryManager
 from housing_predictor.models.trainer import ModelTrainer
 
@@ -49,6 +55,11 @@ class TrainingPipeline:
         )
 
         self.metrics = None
+
+    @staticmethod
+    def _log_step(step: str) -> None:
+        logger.info("")
+        logger.info("========== %s ==========", step)
 
     def load_and_select(self):
         df_raw = load_dataframe(self.config.data.raw_data_path)
@@ -119,10 +130,12 @@ class TrainingPipeline:
 
         return output_path
 
-    def run(self, register_model: bool = False) -> dict:
+    def run(self) -> dict:
+        self._log_step("START TRAINING RUN")
         mlflow.set_experiment(self.config.training.experiment_name)
 
         with mlflow.start_run(run_name=self.config.training.run_name):
+            logger.info("MLflow run started: %s", self.config.training.run_name)
             mlflow.log_params(
                 {
                     "test_size": self.config.data.test_size,
@@ -138,11 +151,26 @@ class TrainingPipeline:
             mlflow.set_tag("training_date", datetime.now(timezone.utc).isoformat())
             mlflow.set_tag("git_commit", self.registry.get_git_commit())
 
+            self._log_step("LOAD AND SELECT FEATURES")
             self.load_and_select()
-            self.split_data()
-            self.preprocess_data()
-            self.train_and_eval()
 
+            self._log_step("SPLIT DATA")
+            self.split_data()
+
+            self._log_step("PREPROCESS DATA")
+            self.preprocess_data()
+
+            self._log_step("TRAIN AND EVALUATE")
+            self.train_and_eval()
+            logger.info(
+                "Metrics | test_r2=%.6f test_rmse=%.2f val_r2=%.6f val_rmse=%.2f",
+                float(self.metrics["test"]["r2"]),
+                float(self.metrics["test"]["rmse"]),
+                float(self.metrics["validation"]["r2"]),
+                float(self.metrics["validation"]["rmse"]),
+            )
+
+            self._log_step("LOG TO MLFLOW")
             mlflow.log_metrics(
                 {
                     "test_r2": self.metrics["test"]["r2"],
@@ -172,20 +200,56 @@ class TrainingPipeline:
                     json.dump(self.preprocessor.get_feature_names(), f)
                 mlflow.log_artifacts(str(tmp_path))
 
-            if register_model:
-                run_id = mlflow.active_run().info.run_id
-                model_version = self.registry.register_model(
-                    run_id,
+            self._log_step("SAVE LOCAL EXPERIMENT BACKUP")
+            backup_path = self.save_artifacts()
+            logger.info("Local experiment backup path: %s", backup_path)
+
+            self._log_step("CHECK GATE AGAINST PRODUCTION")
+            run_id = mlflow.active_run().info.run_id
+            client = MlflowClient()
+            gate = check_metric_against_production(
+                client=client,
+                model_name=self.config.training.registry_model_name,
+                candidate_metric=self.metrics["test"]["r2"],
+                metric_name="test_r2",
+            )
+            logger.info("Metric gate result: %s", gate.to_dict())
+
+            if gate.should_register:
+                self._log_step("REGISTER + PROMOTE TO PRODUCTION")
+                registered_version = self.registry.register_model(
+                    run_id=run_id,
                     model_type=type(self.model).__name__,
                     model_key=self.config.model.model_type,
                 )
-                self.registry.auto_promote_if_better(
-                    new_model_version=model_version,
-                    new_test_r2=self.metrics["test"]["r2"],
+                promote_result = promote_model_version(
+                    client=client,
+                    model_name=self.config.training.registry_model_name,
+                    version=registered_version,
+                    stage="Production",
+                )
+                local_sync_result = save_local_production_from_objects(
+                    model=self.model,
+                    preprocessor=self.preprocessor,
+                    metadata=self._build_metadata(),
+                    config_dict={
+                        "data": self.config.data.__dict__,
+                        "features": self.config.features.__dict__,
+                        "preprocessing": self.config.preprocessing.__dict__,
+                        "model": self.config.model.__dict__,
+                        "training": self.config.training.__dict__,
+                    },
+                )
+                logger.info("Promote result: %s", promote_result)
+                logger.info("Local sync result: %s", local_sync_result)
+            else:
+                self._log_step("SKIP PROMOTION")
+                logger.info(
+                    "Skipping register/promote: candidate did not beat production."
                 )
 
-            backup_path = self.save_artifacts()
-            logger.info("Local experiment backup path: %s", backup_path)
+            self._log_step("END TRAINING RUN")
+            self.metrics["promote_to_production"] = bool(gate.should_register)
             return self.metrics
 
 

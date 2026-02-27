@@ -1,4 +1,4 @@
-"""MLflow registry and promotion helpers."""
+"""MLflow registry helpers."""
 
 import logging
 import subprocess
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class ModelRegistryManager:
-    """Handles model registration, tagging, and promotion."""
+    """Handles model registration and tagging."""
 
     def __init__(self, registry_model_name: str):
         self.registry_model_name = registry_model_name
@@ -69,62 +69,3 @@ class ModelRegistryManager:
             status,
         )
         return version
-
-    def auto_promote_if_better(
-        self,
-        new_model_version: str,
-        new_test_r2: float,
-        improvement_threshold: float = 0.02,
-    ) -> None:
-        client = MlflowClient()
-        production_versions = client.get_latest_versions(
-            self.registry_model_name, stages=["Production"]
-        )
-
-        if not production_versions:
-            client.transition_model_version_stage(
-                name=self.registry_model_name,
-                version=new_model_version,
-                stage="Staging",
-            )
-            client.transition_model_version_stage(
-                name=self.registry_model_name,
-                version=new_model_version,
-                stage="Production",
-                archive_existing_versions=True,
-            )
-            return
-
-        current_prod = production_versions[0]
-        prod_run = client.get_run(current_prod.run_id)
-        prod_r2 = prod_run.data.metrics.get("test_r2")
-
-        if prod_r2 is None:
-            client.transition_model_version_stage(
-                name=self.registry_model_name,
-                version=new_model_version,
-                stage="Staging",
-            )
-            return
-
-        improvement = new_test_r2 - float(prod_r2)
-        target_stage = "Production" if improvement > improvement_threshold else "Staging"
-
-        if target_stage == "Production":
-            client.transition_model_version_stage(
-                name=self.registry_model_name,
-                version=new_model_version,
-                stage="Staging",
-            )
-            client.transition_model_version_stage(
-                name=self.registry_model_name,
-                version=new_model_version,
-                stage="Production",
-                archive_existing_versions=True,
-            )
-        else:
-            client.transition_model_version_stage(
-                name=self.registry_model_name,
-                version=new_model_version,
-                stage="Staging",
-            )
