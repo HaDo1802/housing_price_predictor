@@ -1,8 +1,12 @@
-"""CLI for MLflow model stage transitions."""
-
-import argparse
+"""Script for MLflow model stage transitions."""
 
 from mlflow.tracking import MlflowClient
+
+# Set these values directly before running this script.
+MODEL_NAME = "housing_price_predictor"
+VERSION: str | None = None
+STAGE: str | None = None  # One of: "Staging", "Production", "Archived"
+LIST_ONLY = True
 
 
 def list_models(client: MlflowClient, model_name: str | None = None) -> None:
@@ -11,9 +15,16 @@ def list_models(client: MlflowClient, model_name: str | None = None) -> None:
     else:
         registered_models = client.search_registered_models()
 
+    print(f"DEBUG: Found {len(registered_models)} registered models")
+
+    if not registered_models:
+        print("No registered models found in MLflow registry.")
+        return
+
     for rm in registered_models:
         print(f"\nModel: {rm.name}")
         versions = sorted(rm.latest_versions, key=lambda v: int(v.version))
+        print(f"  Versions: {len(versions)}")
         for mv in versions:
             run = client.get_run(mv.run_id)
             print(
@@ -22,7 +33,9 @@ def list_models(client: MlflowClient, model_name: str | None = None) -> None:
             )
 
 
-def transition_stage(client: MlflowClient, model_name: str, version: str, stage: str) -> None:
+def transition_stage(
+    client: MlflowClient, model_name: str, version: str, stage: str
+) -> None:
     client.transition_model_version_stage(
         name=model_name,
         version=version,
@@ -31,27 +44,21 @@ def transition_stage(client: MlflowClient, model_name: str, version: str, stage:
     )
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Promote/demote MLflow model versions")
-    parser.add_argument("--model-name", default="housing_price_predictor")
-    parser.add_argument("--version")
-    parser.add_argument("--stage", choices=["Staging", "Production", "Archived"])
-    parser.add_argument("--list-only", action="store_true")
-    return parser.parse_args()
-
-
 def main() -> None:
-    args = parse_args()
     client = MlflowClient()
+
+    # Debug: Check MLflow connection
+    print(f"MLflow Tracking URI: {client.tracking_uri}")
+    print(f"Searching for all registered models...\n")
 
     list_models(client, model_name=None)
 
-    if args.list_only:
+    if LIST_ONLY:
         return
 
-    if args.version and args.stage:
-        transition_stage(client, args.model_name, str(args.version), args.stage)
-        list_models(client, model_name=args.model_name)
+    if VERSION and STAGE:
+        transition_stage(client, MODEL_NAME, str(VERSION), STAGE)
+        list_models(client, model_name=MODEL_NAME)
 
 
 if __name__ == "__main__":
