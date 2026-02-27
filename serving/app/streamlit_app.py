@@ -35,8 +35,8 @@ import streamlit as st
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from conf.config_manager import ConfigManager
-from src.housing_predictor.monitoring.feedback_collector import save_feedback_record
+from housing_predictor.config_manager import ConfigManager
+from housing_predictor.monitoring.feedback_collector import save_feedback_record
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -142,13 +142,26 @@ def fetch_model_info():
     return None
 
 
+@st.cache_data(ttl=30)
+def fetch_api_health():
+    """Fetch API health status for clearer diagnostics."""
+    url = f"{API_BASE_URL}/health"
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            return response.json()
+    except requests.RequestException:
+        return None
+    return None
+
+
 def build_api_payload(inputs: dict) -> dict:
     """Map Streamlit inputs to FastAPI payload keys"""
     feature_map = {
         "Lot Area": "lot_area",
         "Total Bsmt SF": "total_bsmt_sf",
-        "1st Flr SF": "1st Flr SF",
-        "2nd Flr SF": "2nd Flr SF",
+        "1st Flr SF": "first_flr_sf",
+        "2nd Flr SF": "second_flr_sf",
         "Gr Liv Area": "gr_liv_area",
         "Garage Area": "garage_area",
         "Overall Qual": "overall_qual",
@@ -271,85 +284,82 @@ def create_input_form(config):
     with tab1:
         st.subheader("Numerical Features")
 
-        # Organize numeric features into columns
-        col1, col2, col3 = st.columns(3)
-
         # Group features logically
-        size_features = [
-            "Lot Area",
-            "Total Bsmt SF",
-            "1st Flr SF",
-            "2nd Flr SF",
-            "Gr Liv Area",
-            "Garage Area",
+        group_defs = [
+            (
+                "Size & Area",
+                [
+                    "Lot Area",
+                    "Total Bsmt SF",
+                    "1st Flr SF",
+                    "2nd Flr SF",
+                    "Gr Liv Area",
+                    "Garage Area",
+                ],
+                {"min_value": 0.0, "value": None, "step": 10.0},
+            ),
+            (
+                "Quality & Condition",
+                ["Overall Qual", "Overall Cond"],
+                {
+                    "min_value": 1,
+                    "max_value": 10,
+                    "value": None,
+                    "step": 1,
+                    "help": "Rate from 1 (poor) to 10 (excellent)",
+                },
+            ),
+            (
+                "Year",
+                ["Year Built", "Year Remod/Add"],
+                {
+                    "min_value": 1800,
+                    "max_value": 2026,
+                    "value": None,
+                    "step": 1,
+                },
+            ),
+            (
+                "Rooms & Facilities",
+                [
+                    "Bedroom AbvGr",
+                    "Full Bath",
+                    "Half Bath",
+                    "TotRms AbvGrd",
+                    "Fireplaces",
+                    "Garage Cars",
+                ],
+                {"min_value": 0, "max_value": 20, "value": None, "step": 1},
+            ),
         ]
-        quality_features = ["Overall Qual", "Overall Cond"]
-        year_features = ["Year Built", "Year Remod/Add"]
-        room_features = [
-            "Bedroom AbvGr",
-            "Full Bath",
-            "Half Bath",
-            "TotRms AbvGrd",
-            "Fireplaces",
-            "Garage Cars",
-        ]
 
-        with col1:
-            st.markdown("**Size & Area**")
-            for feature in size_features:
-                if feature in numeric_features:
-                    inputs[feature] = st.number_input(
-                        feature,
-                        min_value=0.0,
-                        value=None,
-                        step=10.0,
-                        help=(
-                            f"Enter the {feature.lower()} in square feet"
-                            if "SF" in feature or "Area" in feature
-                            else f"Enter {feature.lower()}"
-                        ),
-                        key=f"input_{feature}",
-                    )
+        active_groups = []
+        for title, features, params in group_defs:
+            active = [f for f in features if f in numeric_features]
+            if active:
+                active_groups.append((title, active, params))
 
-        with col2:
-            st.markdown("**Quality & Year**")
-            for feature in quality_features:
-                if feature in numeric_features:
-                    inputs[feature] = st.number_input(
-                        feature,
-                        min_value=1,
-                        max_value=10,
-                        value=None,
-                        step=1,
-                        help=f"Rate from 1 (poor) to 10 (excellent)",
-                        key=f"input_{feature}",
-                    )
-
-            for feature in year_features:
-                if feature in numeric_features:
-                    inputs[feature] = st.number_input(
-                        feature,
-                        min_value=1800,
-                        max_value=2026,
-                        value=None,
-                        step=1,
-                        help=f"Enter the {feature.lower()}",
-                        key=f"input_{feature}",
-                    )
-
-        with col3:
-            st.markdown("**Rooms & Facilities**")
-            for feature in room_features:
-                if feature in numeric_features:
-                    inputs[feature] = st.number_input(
-                        feature,
-                        min_value=0,
-                        max_value=20,
-                        value=None,
-                        step=1,
-                        help=f"Number of {feature.lower()}",
-                        key=f"input_{feature}",
-                    )
+        if not active_groups:
+            st.info("No numeric features configured in `conf/config.yaml`.")
+        else:
+            columns = st.columns(min(3, len(active_groups)))
+            for idx, (title, features, params) in enumerate(active_groups):
+                with columns[idx % len(columns)]:
+                    st.markdown(f"**{title}**")
+                    for feature in features:
+                        help_text = params.get("help")
+                        if help_text is None:
+                            if "SF" in feature or "Area" in feature:
+                                help_text = f"Enter the {feature.lower()} in square feet"
+                            else:
+                                help_text = f"Enter {feature.lower()}"
+                        input_params = {k: v for k, v in params.items() if k != "help"}
+                        inputs[feature] = st.number_input(
+                            feature,
+                            help=help_text,
+                            key=f"input_{feature}",
+                            **input_params,
+                        )
 
     with tab2:
         st.subheader("Categorical Features")
@@ -713,6 +723,12 @@ def main():
 
         st.markdown("---")
         st.markdown("**Model Info:**")
+        st.caption(f"API URL: `{API_BASE_URL}`")
+        health = fetch_api_health()
+        if health is None:
+            st.error("API is unreachable. Start FastAPI or fix `API_BASE_URL`.")
+        elif not health.get("model_loaded", False):
+            st.warning("API is running, but model is not loaded on startup.")
         model_info = fetch_model_info()
         if model_info:
             st.info(f"Model: {model_info.get('model_type', 'unknown')}")

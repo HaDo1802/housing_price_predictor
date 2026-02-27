@@ -7,7 +7,7 @@ from pathlib import Path
 import mlflow
 import yaml
 
-from src.housing_predictor.pipelines.training import TrainingPipeline
+from housing_predictor.pipelines.training import TrainingPipeline
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)

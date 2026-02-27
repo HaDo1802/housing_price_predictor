@@ -1,4 +1,4 @@
-from src.housing_predictor.features.preprocessor import ProductionPreprocessor
+from housing_predictor.features.preprocessor import ProductionPreprocessor
 
 
 def test_preprocessor_fit_transform(sample_housing_df):

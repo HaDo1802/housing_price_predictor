@@ -2,7 +2,7 @@
 
 import logging
 
-from src.housing_predictor.pipelines.training import TrainingPipeline
+from housing_predictor.pipelines.training import TrainingPipeline
 
 
 if __name__ == "__main__":

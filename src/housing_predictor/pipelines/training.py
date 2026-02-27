@@ -9,13 +9,13 @@ from pathlib import Path
 import mlflow
 import mlflow.sklearn
 
-from conf.config_manager import ConfigManager
-from src.housing_predictor.data.loader import load_dataframe
-from src.housing_predictor.data.splitter import DataSplitter
-from src.housing_predictor.features.preprocessor import ProductionPreprocessor
-from src.housing_predictor.models.evaluator import regression_metrics
-from src.housing_predictor.models.registry import ModelRegistryManager
-from src.housing_predictor.models.trainer import GradientBoostingTrainer
+from housing_predictor.config_manager import ConfigManager
+from housing_predictor.data.loader import load_dataframe
+from housing_predictor.data.splitter import DataSplitter
+from housing_predictor.features.preprocessor import ProductionPreprocessor
+from housing_predictor.models.evaluator import regression_metrics
+from housing_predictor.models.registry import ModelRegistryManager
+from housing_predictor.models.trainer import GradientBoostingTrainer
 
 logger = logging.getLogger(__name__)
 

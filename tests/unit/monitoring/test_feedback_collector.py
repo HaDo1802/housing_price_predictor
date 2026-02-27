@@ -2,7 +2,7 @@ import json
 
 import pandas as pd
 
-from src.housing_predictor.monitoring.feedback_collector import (
+from housing_predictor.monitoring.feedback_collector import (
     load_feedback,
     save_feedback_record,
 )

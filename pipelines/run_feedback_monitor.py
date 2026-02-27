@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from conf.config_manager import ConfigManager
-from src.housing_predictor.monitoring.drift import compute_psi, evaluate_feedback
-from src.housing_predictor.monitoring.feedback_collector import load_feedback
+from housing_predictor.config_manager import ConfigManager
+from housing_predictor.monitoring.drift import compute_psi, evaluate_feedback
+from housing_predictor.monitoring.feedback_collector import load_feedback
 
 
 def main() -> None:

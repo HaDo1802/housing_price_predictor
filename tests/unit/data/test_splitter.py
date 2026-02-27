@@ -1,4 +1,4 @@
-from src.housing_predictor.data.splitter import DataSplitter
+from housing_predictor.data.splitter import DataSplitter
 
 
 def test_splitter_sizes(sample_housing_df):

@@ -1,4 +1,4 @@
-from src.housing_predictor.pipelines.training import TrainingPipeline
+from housing_predictor.pipelines.training import TrainingPipeline
 
 
 def test_training_pipeline_importable():

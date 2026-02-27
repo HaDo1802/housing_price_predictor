@@ -13,7 +13,7 @@ from serving.api.schemas import (
     HouseFeatures,
     PredictionResponse,
 )
-from src.housing_predictor.features.schema import API_TO_MODEL_FIELDS
+from housing_predictor.features.schema import API_TO_MODEL_FIELDS
 
 router = APIRouter(prefix="/predict", tags=["Prediction"])
 

@@ -9,45 +9,19 @@ data:
   val_size: 0.1
   random_state: 42
 
-# # Data Quality Checks
-# data_quality:
-#   max_missing_pct: 20      # Stop if column has >20% missing
-#   min_variance: 0.01       # Stop if variance <0.01
-#   min_correlation: 0.05    # Stop if |correlation| <0.05
-#   stop_on_failure: true    # true = raise error, false = warn
-
-# Feature Selection (Manual from your EDA)
 features:
   numeric:
-    # - 'Lot Area'
-    # - 'Total Bsmt SF'
-    # - '1st Flr SF'
-    # - '2nd Flr SF'
-    # - 'Gr Liv Area'
-    # - 'Garage Area'
     - "Overall Qual"
     - "Overall Cond"
     - "Year Built"
     - "Year Remod/Add"
     - "Bedroom AbvGr"
     - "Full Bath"
-    # - 'Half Bath'
-    # - 'TotRms AbvGrd'
-    # - 'Fireplaces'
-    # - 'Garage Cars'
-
+    
   categorical:
     - "Neighborhood"
     - "MS Zoning"
     - "Bldg Type"
-    # - 'House Style'
-    # - 'Foundation'
-    # - 'Central Air'
-    # - 'Garage Type'
-
-  # exclude:
-  #   - 'Order'
-  #   - 'PID'
 
 # Preprocessing Configuration
 preprocessing:

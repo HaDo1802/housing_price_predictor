@@ -15,7 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from serving.api.routers.health import router as health_router
 from serving.api.routers.model import router as model_router
 from serving.api.routers.predict import router as predict_router
-from src.housing_predictor.pipelines.inference import InferencePipeline
+from housing_predictor.pipelines.inference import InferencePipeline
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
