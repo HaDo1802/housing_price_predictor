@@ -57,7 +57,7 @@ class FeatureSelectionConfig:
 @dataclass
 class MLConfig:
     data: DataConfig
-    features: FeatureSelectionConfig
+    feature: FeatureSelectionConfig
     preprocessing: PreprocessingConfig
     model: ModelConfig
     training: TrainingConfig
@@ -85,7 +85,7 @@ class ConfigManager:
         # Step 1: load base config
         cfg = {
             "data": self._load_yaml(base_dir / "data.yaml"),
-            "features": self._load_yaml(base_dir / "features.yaml"),
+            "feature": self._load_yaml(base_dir / "feature.yaml"),
             "preprocessing": self._load_yaml(base_dir / "preprocessing.yaml"),
             "model": self._load_yaml(base_dir / "model.yaml"),
             "training": self._load_yaml(base_dir / "training.yaml"),
@@ -95,7 +95,7 @@ class ConfigManager:
         cfg["data"].update(env_data)
         # Step 3: override with whatever is in config.yaml  ← THIS WAS MISSING
         main_config = self._load_yaml(root / "config.yaml")
-        for section in ["data", "features", "preprocessing", "model", "training"]:
+        for section in ["data", "feature", "preprocessing", "model", "training"]:
             if section in main_config and main_config[section]:
                 cfg[section].update(main_config[section])
         return cfg
@@ -110,7 +110,7 @@ class ConfigManager:
 
         return MLConfig(
             data=DataConfig(**config_dict["data"]),
-            features=FeatureSelectionConfig(**config_dict.get("features", {})),
+            feature=FeatureSelectionConfig(**config_dict.get("feature", {})),
             preprocessing=PreprocessingConfig(**config_dict["preprocessing"]),
             model=ModelConfig(**config_dict["model"]),
             training=TrainingConfig(**config_dict["training"]),
@@ -122,7 +122,7 @@ class ConfigManager:
     def save_config(self, output_path: str) -> None:
         config_dict = {
             "data": self.config.data.__dict__,
-            "features": self.config.features.__dict__,
+            "feature": self.config.feature.__dict__,
             "preprocessing": self.config.preprocessing.__dict__,
             "model": self.config.model.__dict__,
             "training": self.config.training.__dict__,
