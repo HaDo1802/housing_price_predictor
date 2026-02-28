@@ -164,6 +164,29 @@ class TrainingPipeline:
         self.X_train_transformed = self.preprocessor.fit_transform(self.X_train)
         self.X_test_transformed = self.preprocessor.transform(self.X_test)
 
+    def _apply_monotonic_constraints(self) -> None:
+        """
+        Enforce monotonic increase for key housing capacity features when using HGB.
+        This guarantees predictions do not decrease when these features increase
+        (all else equal in transformed feature space).
+        """
+        if self.config.model.model_type != "hist_gradient_boosting":
+            return
+
+        n_features = int(self.X_train_transformed.shape[1])
+        constraints = [0] * n_features
+        numeric = list(getattr(self.preprocessor, "numeric_features", []))
+        for feature_name in ("bedrooms", "bathrooms", "livingarea"):
+            if feature_name in numeric:
+                constraints[numeric.index(feature_name)] = 1
+
+        self.trainer.set_hyperparameter("monotonic_cst", constraints)
+        logger.info(
+            "Applied monotonic constraints for features %s (vector length=%s).",
+            ["bedrooms", "bathrooms", "livingarea"],
+            n_features,
+        )
+
     @staticmethod
     def _compute_price_weights(y) -> np.ndarray:
         """
@@ -177,6 +200,7 @@ class TrainingPipeline:
         return np.clip(weights, 0.5, 3.0)
 
     def train_and_eval(self):
+        self._apply_monotonic_constraints()
         train_weights = self._compute_price_weights(self.y_train)
         self.model = self.trainer.fit(
             self.X_train_transformed, self.y_train, sample_weight=train_weights

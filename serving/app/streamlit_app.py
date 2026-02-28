@@ -359,7 +359,7 @@ def validate_inputs(inputs: dict, required_features: list) -> tuple:
         if feature not in inputs or inputs[feature] is None or inputs[feature] == "":
             missing_fields.append(feature)
 
-    # Check for invalid numeric values
+    # Check numeric ranges using per-feature input config.
     for feature, value in inputs.items():
         if feature in required_features:
             # Skip if already missing
@@ -368,8 +368,13 @@ def validate_inputs(inputs: dict, required_features: list) -> tuple:
 
             # Validate numeric ranges
             if isinstance(value, (int, float)):
-                if value < 0:
-                    error_messages.append(f"{feature}: Cannot be negative")
+                cfg = NUMERIC_INPUT_CONFIG.get(feature, {})
+                min_value = cfg.get("min_value")
+                max_value = cfg.get("max_value")
+                if min_value is not None and value < min_value:
+                    error_messages.append(f"{feature}: Must be >= {min_value}")
+                if max_value is not None and value > max_value:
+                    error_messages.append(f"{feature}: Must be <= {max_value}")
 
     is_valid = len(missing_fields) == 0 and len(error_messages) == 0
 

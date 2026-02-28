@@ -286,6 +286,38 @@ class InferencePipeline:
         df = pd.DataFrame({"feature": feature_names, "importance": importances})
         return df.sort_values("importance", ascending=False).head(top_n)
 
+    def get_local_feature_importance(
+        self, X: pd.DataFrame, top_n: int = 10, delta: float = 0.25
+    ) -> pd.DataFrame:
+        """
+        Fallback local importance by finite-difference sensitivity on transformed inputs.
+        Returns absolute prediction change per transformed feature.
+        """
+        self._validate_input(X)
+        X_t = np.asarray(self.preprocessor.transform(X), dtype=float)
+        if X_t.ndim != 2 or X_t.shape[0] == 0:
+            raise ValueError("Input must contain at least one sample.")
+
+        x0 = X_t[0].copy()
+        base_pred = float(self.model.predict(x0.reshape(1, -1))[0])
+        names = self.metadata.get("feature_names", [])
+        if len(names) != x0.shape[0]:
+            names = [f"feature_{i}" for i in range(x0.shape[0])]
+
+        impacts = []
+        for idx in range(x0.shape[0]):
+            x_up = x0.copy()
+            x_dn = x0.copy()
+            x_up[idx] = x_up[idx] + delta
+            x_dn[idx] = x_dn[idx] - delta
+            pred_up = float(self.model.predict(x_up.reshape(1, -1))[0])
+            pred_dn = float(self.model.predict(x_dn.reshape(1, -1))[0])
+            impact = max(abs(pred_up - base_pred), abs(pred_dn - base_pred))
+            impacts.append(float(impact))
+
+        df = pd.DataFrame({"feature": names, "importance": impacts})
+        return df.sort_values("importance", ascending=False).head(top_n)
+
     def get_model_info(self) -> Dict:
         """Return basic model information."""
         return {

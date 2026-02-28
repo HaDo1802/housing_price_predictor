@@ -29,6 +29,7 @@ class ModelTrainer:
         random_state: int = 42,
         use_log_target: bool = True,
     ):
+        self.model_type = model_type
         model_class = self._resolve_model_class(model_type)
         if model_class is None:
             raise ValueError(
@@ -96,6 +97,17 @@ class ModelTrainer:
             # accept sample_weight in fit().
             self.model.fit(X_train, y_train)
         return self.model
+
+    def set_hyperparameter(self, name: str, value) -> None:
+        """
+        Override a model hyperparameter after initialization.
+        Useful when the final value depends on transformed feature count.
+        """
+        if isinstance(self.model, TransformedTargetRegressor):
+            self.base_model.set_params(**{name: value})
+            self.model.set_params(**{f"regressor__{name}": value})
+        else:
+            self.model.set_params(**{name: value})
 
     def predict(self, X):
         return self.model.predict(X)

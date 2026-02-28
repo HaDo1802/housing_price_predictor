@@ -38,10 +38,17 @@ def _features_to_row(features):
     return row
 
 
-def _get_top_features(pipeline):
+def _get_top_features(pipeline, df: pd.DataFrame | None = None):
     try:
         return pipeline.get_feature_importance(top_n=5).to_dict("records")
     except Exception:
+        if df is not None:
+            try:
+                return pipeline.get_local_feature_importance(df, top_n=5).to_dict(
+                    "records"
+                )
+            except Exception:
+                return None
         return None
 
 
@@ -70,7 +77,7 @@ async def predict(features: HouseFeatures, request: Request):
             "upper": float(pred + upper_bounds[0]),
         },
         model_version="production",
-        top_features=_get_top_features(pipeline),
+        top_features=_get_top_features(pipeline, df),
     )
 
 
@@ -84,7 +91,7 @@ async def predict_batch(request_body: BatchPredictionRequest, request: Request):
 
     df = pd.DataFrame([_features_to_row(row) for row in request_body.features])
     preds, lower_bounds, upper_bounds = pipeline.predict_with_uncertainty(df)
-    top_features = _get_top_features(pipeline)
+    top_features = _get_top_features(pipeline, df.iloc[[0]])
 
     rows = []
     for idx in range(len(df)):
