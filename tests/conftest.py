@@ -17,13 +17,21 @@ def sample_housing_df():
                 "SINGLE_FAMILY",
                 "CONDO",
             ],
-            "vegas_district": [
-                "Spring Valley",
-                "Summerlin",
-                "Downtown Las Vegas",
-                "Centennial",
-                "Summerlin",
-                "Winchester",
+            "latitude": [
+                36.1021,
+                36.1699,
+                36.1147,
+                36.2839,
+                36.1699,
+                36.1420,
+            ],
+            "longitude": [
+                -115.2450,
+                -115.3378,
+                -115.1728,
+                -115.2710,
+                -115.3378,
+                -115.0987,
             ],
             "price": [225000, 420000, 355000, 610000, 980000, 295000],
         }
