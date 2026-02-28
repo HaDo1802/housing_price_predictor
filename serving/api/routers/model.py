@@ -1,6 +1,12 @@
 """Model information endpoints."""
 
 from fastapi import APIRouter, HTTPException, Request
+from housing_predictor.features.schema import (
+    CATEGORICAL_FEATURES,
+    CATEGORICAL_OPTIONS,
+    FEATURE_DISPLAY_LABELS,
+    NUMERIC_FEATURES,
+)
 
 router = APIRouter(prefix="/model", tags=["Model"])
 
@@ -52,4 +58,19 @@ async def model_info(request: Request):
             "val_size": pipeline.metadata.get("val_size"),
             "test_size": pipeline.metadata.get("test_size"),
         },
+    }
+
+
+@router.get("/schema")
+async def model_schema():
+    """Canonical raw input feature contract used by API and Streamlit."""
+    feature_names = list(NUMERIC_FEATURES) + list(CATEGORICAL_FEATURES)
+    return {
+        "features": {
+            "required": feature_names,
+            "numeric": list(NUMERIC_FEATURES),
+            "categorical": list(CATEGORICAL_FEATURES),
+            "display_labels": FEATURE_DISPLAY_LABELS,
+            "categorical_options": CATEGORICAL_OPTIONS,
+        }
     }

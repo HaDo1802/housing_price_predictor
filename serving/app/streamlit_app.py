@@ -39,8 +39,64 @@ for p in (PROJECT_ROOT, SRC_ROOT):
     if p_str not in sys.path:
         sys.path.insert(0, p_str)
 
-from housing_predictor.features.schema import CATEGORICAL_FEATURES, NUMERIC_FEATURES
+from housing_predictor.features import schema as feature_schema
 from housing_predictor.monitoring.feedback_collector import save_feedback_record
+
+NUMERIC_FEATURES = list(
+    getattr(
+        feature_schema,
+        "NUMERIC_FEATURES",
+        ["bedrooms", "bathrooms", "livingarea", "latitude", "longitude"],
+    )
+)
+CATEGORICAL_FEATURES = list(
+    getattr(feature_schema, "CATEGORICAL_FEATURES", ["propertytype", "vegas_district"])
+)
+FEATURE_DISPLAY_LABELS = dict(
+    getattr(
+        feature_schema,
+        "FEATURE_DISPLAY_LABELS",
+        {
+            "bedrooms": "Bedrooms",
+            "bathrooms": "Bathrooms",
+            "livingarea": "Living Area (sqft)",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+            "propertytype": "Property Type",
+            "vegas_district": "Vegas District",
+        },
+    )
+)
+CATEGORICAL_OPTIONS = dict(
+    getattr(
+        feature_schema,
+        "CATEGORICAL_OPTIONS",
+        {
+            "propertytype": [
+                "SINGLE_FAMILY",
+                "TOWNHOUSE",
+                "CONDO",
+                "MULTI_FAMILY",
+                "MOBILE",
+            ],
+            "vegas_district": [
+                "Summerlin",
+                "Green Valley",
+                "Henderson",
+                "Downtown Las Vegas",
+                "North Las Vegas",
+                "Spring Valley",
+                "Paradise",
+                "Enterprise",
+                "Centennial",
+                "Mountains Edge",
+                "The Strip",
+                "Winchester",
+                "Anthem",
+            ],
+        },
+    )
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -125,16 +181,6 @@ st.markdown(
 )
 
 
-DISPLAY_LABELS = {
-    "bedrooms": "Bedrooms",
-    "bathrooms": "Bathrooms",
-    "livingarea": "Living Area (sqft)",
-    "latitude": "Latitude",
-    "longitude": "Longitude",
-    "propertytype": "Property Type",
-    "vegas_district": "Vegas District",
-}
-
 NUMERIC_INPUT_CONFIG = {
     "bedrooms": {"min_value": 0, "max_value": 20, "value": 3, "step": 1},
     "bathrooms": {"min_value": 0.0, "max_value": 20.0, "value": 2.0, "step": 0.5},
@@ -151,31 +197,6 @@ NUMERIC_INPUT_CONFIG = {
         "value": -115.14,
         "step": 0.0001,
     },
-}
-
-CATEGORICAL_OPTIONS = {
-    "propertytype": [
-        "SINGLE_FAMILY",
-        "TOWNHOUSE",
-        "CONDO",
-        "MULTI_FAMILY",
-        "MOBILE",
-    ],
-    "vegas_district": [
-        "Summerlin",
-        "Green Valley",
-        "Henderson",
-        "Downtown Las Vegas",
-        "North Las Vegas",
-        "Spring Valley",
-        "Paradise",
-        "Enterprise",
-        "Centennial",
-        "Mountains Edge",
-        "The Strip",
-        "Winchester",
-        "Anthem",
-    ],
 }
 
 
@@ -195,27 +216,45 @@ def fetch_model_info(base_url: str):
     return None
 
 
-def resolve_feature_spec(model_info: Optional[dict]) -> tuple[list[str], list[str]]:
-    """Resolve numeric/categorical features with API-first fallback."""
+@st.cache_data(ttl=60)
+def fetch_model_schema(base_url: str):
+    """Fetch canonical input feature contract from the API."""
+    url = f"{base_url.rstrip('/')}/model/schema"
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            payload = response.json()
+            return payload.get("features", payload)
+        logger.warning(
+            "Model schema request failed: %s - %s", response.status_code, response.text
+        )
+    except requests.RequestException as exc:
+        logger.warning("Model schema request error: %s", exc)
+    return None
+
+
+def resolve_feature_spec(
+    schema_contract: Optional[dict],
+) -> tuple[list[str], list[str], dict[str, str], dict[str, list[str]]]:
+    """Resolve feature contract from API schema endpoint with local fallback."""
     numeric_features = list(NUMERIC_FEATURES)
     categorical_features = list(CATEGORICAL_FEATURES)
+    display_labels = dict(FEATURE_DISPLAY_LABELS)
+    categorical_options = dict(CATEGORICAL_OPTIONS)
 
-    if model_info:
-        model_features = model_info.get("features", {}).get("names", []) or []
-        if model_features:
-            numeric_features = [f for f in model_features if f in NUMERIC_FEATURES]
-            categorical_features = [
-                f for f in model_features if f in CATEGORICAL_FEATURES
-            ]
-            # Preserve unknown features so UI still renders if API evolves.
-            extras = [
-                f
-                for f in model_features
-                if f not in numeric_features and f not in categorical_features
-            ]
-            categorical_features.extend(extras)
+    if schema_contract:
+        numeric_features = schema_contract.get("numeric") or numeric_features
+        categorical_features = (
+            schema_contract.get("categorical") or categorical_features
+        )
+        display_labels.update(schema_contract.get("display_labels") or {})
 
-    return numeric_features, categorical_features
+        remote_options = schema_contract.get("categorical_options") or {}
+        for key, values in remote_options.items():
+            if isinstance(values, list) and values:
+                categorical_options[key] = values
+
+    return numeric_features, categorical_features, display_labels, categorical_options
 
 
 @st.cache_data(ttl=30)
@@ -343,7 +382,10 @@ def validate_inputs(inputs: dict, required_features: list) -> tuple:
 
 
 def create_input_form(
-    numeric_features: list[str], categorical_features: list[str]
+    numeric_features: list[str],
+    categorical_features: list[str],
+    display_labels: dict[str, str],
+    categorical_options: dict[str, list[str]],
 ) -> tuple[dict, list[str]]:
     """Create input form from resolved feature specification."""
 
@@ -374,7 +416,7 @@ def create_input_form(
             for idx, feature in enumerate(numeric_features):
                 col = col_left if idx % 2 == 0 else col_right
                 with col:
-                    label = DISPLAY_LABELS.get(
+                    label = display_labels.get(
                         feature, feature.replace("_", " ").title()
                     )
                     params = NUMERIC_INPUT_CONFIG.get(
@@ -396,10 +438,10 @@ def create_input_form(
             for idx, feature in enumerate(categorical_features):
                 col = col1 if idx % 2 == 0 else col2
                 with col:
-                    label = DISPLAY_LABELS.get(
+                    label = display_labels.get(
                         feature, feature.replace("_", " ").title()
                     )
-                    options = CATEGORICAL_OPTIONS.get(feature)
+                    options = categorical_options.get(feature)
                     if options:
                         val = st.selectbox(
                             label,
@@ -669,13 +711,13 @@ def main():
         st.title("About")
         st.markdown(
             """
-        This application uses a **Gradient Boosting Regressor** model 
-        trained on the Ames Housing dataset to predict house prices.
+        This application predicts property prices using the deployed
+        **Housing Predictor** model and a strict API feature contract.
         
-        **Model Performance:**
-        - R² Score: 0.917
-        - RMSE: $25,793
-        - MAE: $15,819
+        **Core input features:**
+        - Bedrooms, Bathrooms, Living Area
+        - Latitude, Longitude
+        - Property Type, Vegas District
         
         **Instructions:**
         1. Fill in all required property details
@@ -725,15 +767,21 @@ def main():
             """
         - All fields are required
         - Numerical values must be non-negative
-        - Quality ratings are 1-10
-        - Years should be between 1800-2026
+        - Coordinates should be valid for the target market
+        - Use exact categorical values shown in dropdowns
         """
         )
 
     # Main content
-    numeric_features, categorical_features = resolve_feature_spec(model_info)
+    schema_contract = fetch_model_schema(active_url) if active_url else None
+    numeric_features, categorical_features, display_labels, categorical_options = (
+        resolve_feature_spec(schema_contract)
+    )
     inputs, required_features = create_input_form(
-        numeric_features, categorical_features
+        numeric_features,
+        categorical_features,
+        display_labels,
+        categorical_options,
     )
 
     st.markdown("---")

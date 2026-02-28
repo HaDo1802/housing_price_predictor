@@ -35,4 +35,39 @@ CATEGORICAL_FEATURES = [
     "vegas_district",
 ]
 
+FEATURE_DISPLAY_LABELS = {
+    "bedrooms": "Bedrooms",
+    "bathrooms": "Bathrooms",
+    "livingarea": "Living Area (sqft)",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "propertytype": "Property Type",
+    "vegas_district": "Vegas District",
+}
+
+CATEGORICAL_OPTIONS = {
+    "propertytype": [
+        "SINGLE_FAMILY",
+        "TOWNHOUSE",
+        "CONDO",
+        "MULTI_FAMILY",
+        "MOBILE",
+    ],
+    "vegas_district": [
+        "Summerlin",
+        "Green Valley",
+        "Henderson",
+        "Downtown Las Vegas",
+        "North Las Vegas",
+        "Spring Valley",
+        "Paradise",
+        "Enterprise",
+        "Centennial",
+        "Mountains Edge",
+        "The Strip",
+        "Winchester",
+        "Anthem",
+    ],
+}
+
 TARGET_COLUMN = "price"
