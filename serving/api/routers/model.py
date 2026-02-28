@@ -33,10 +33,9 @@ async def model_info(request: Request):
         raise HTTPException(status_code=503, detail=detail)
 
     transformed_feature_names = pipeline.metadata.get("feature_names", [])
-    raw_feature_names = _raw_feature_names(pipeline)
-    if not raw_feature_names:
-        # Fallback when preprocessor does not expose raw feature fields.
-        raw_feature_names = transformed_feature_names
+    # Use canonical contract as single source of truth for API clients.
+    raw_feature_names = list(NUMERIC_FEATURES) + list(CATEGORICAL_FEATURES)
+    artifact_raw_feature_names = _raw_feature_names(pipeline)
 
     return {
         "model_type": pipeline.metadata.get("model_type"),
@@ -49,10 +48,14 @@ async def model_info(request: Request):
             "count": len(raw_feature_names),
             "names": raw_feature_names,
         },
-        # "transformed_features": {
-        #     "count": len(transformed_feature_names),
-        #     "names": transformed_feature_names,
-        # },
+        "artifact_features": {
+            "count": len(artifact_raw_feature_names),
+            "names": artifact_raw_feature_names,
+        },
+        "transformed_features": {
+            "count": len(transformed_feature_names),
+            "names": transformed_feature_names,
+        },
         "training_info": {
             "train_size": pipeline.metadata.get("train_size"),
             "val_size": pipeline.metadata.get("val_size"),

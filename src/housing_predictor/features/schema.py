@@ -4,8 +4,6 @@ MODEL_FEATURES = [
     "bedrooms",
     "bathrooms",
     "livingarea",
-    "latitude",
-    "longitude",
     "propertytype",
     "vegas_district",
 ]
@@ -15,8 +13,6 @@ API_TO_MODEL_FIELDS = {
     "bathrooms": "bathrooms",
     "livingarea": "livingarea",
     "living_area": "livingarea",
-    "latitude": "latitude",
-    "longitude": "longitude",
     "propertytype": "propertytype",
     "property_type": "propertytype",
     "vegas_district": "vegas_district",
@@ -26,8 +22,6 @@ NUMERIC_FEATURES = [
     "bedrooms",
     "bathrooms",
     "livingarea",
-    "latitude",
-    "longitude",
 ]
 
 CATEGORICAL_FEATURES = [
@@ -39,8 +33,6 @@ FEATURE_DISPLAY_LABELS = {
     "bedrooms": "Bedrooms",
     "bathrooms": "Bathrooms",
     "livingarea": "Living Area (sqft)",
-    "latitude": "Latitude",
-    "longitude": "Longitude",
     "propertytype": "Property Type",
     "vegas_district": "Vegas District",
 }

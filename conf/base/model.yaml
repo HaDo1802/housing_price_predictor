@@ -1,8 +1,7 @@
-model_type: "hist_gradient_boosting"
+model_type: "random_forest"
 hyperparameters:
-  learning_rate: 0.05
-  max_iter: 400
-  max_leaf_nodes: 31
-  min_samples_leaf: 20
-  l2_regularization: 0.1
+  n_estimators: 400
+  max_depth: 14
+  min_samples_leaf: 2
+  max_features: "sqrt"
   random_state: 42

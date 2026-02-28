@@ -46,7 +46,7 @@ NUMERIC_FEATURES = list(
     getattr(
         feature_schema,
         "NUMERIC_FEATURES",
-        ["bedrooms", "bathrooms", "livingarea", "latitude", "longitude"],
+        ["bedrooms", "bathrooms", "livingarea"],
     )
 )
 CATEGORICAL_FEATURES = list(
@@ -60,8 +60,6 @@ FEATURE_DISPLAY_LABELS = dict(
             "bedrooms": "Bedrooms",
             "bathrooms": "Bathrooms",
             "livingarea": "Living Area (sqft)",
-            "latitude": "Latitude",
-            "longitude": "Longitude",
             "propertytype": "Property Type",
             "vegas_district": "Vegas District",
         },
@@ -189,13 +187,6 @@ NUMERIC_INPUT_CONFIG = {
         "max_value": 20000.0,
         "value": 1800.0,
         "step": 50.0,
-    },
-    "latitude": {"min_value": 35.5, "max_value": 36.5, "value": 36.17, "step": 0.0001},
-    "longitude": {
-        "min_value": -115.5,
-        "max_value": -114.5,
-        "value": -115.14,
-        "step": 0.0001,
     },
 }
 
@@ -716,7 +707,6 @@ def main():
         
         **Core input features:**
         - Bedrooms, Bathrooms, Living Area
-        - Latitude, Longitude
         - Property Type, Vegas District
         
         **Instructions:**
