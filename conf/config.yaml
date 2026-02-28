@@ -28,19 +28,18 @@ preprocessing:
   target_transform: "log1p"
 
 model:
-  model_type: "gradient_boosting"
+  model_type: "hist_gradient_boosting"
   random_state: 42
   hyperparameters:
-    n_estimators: 800
     learning_rate: 0.03
-    max_depth: 4
+    max_iter: 1200
+    max_leaf_nodes: 63
     min_samples_leaf: 8
-    subsample: 0.9
-    max_features: null
+    l2_regularization: 0.0
 
 # Training Configuration
 training:
   experiment_name: "house_price_prediction_test_2"
-  run_name: "gbr_no_geo_tuned"
+  run_name: "hgb_no_geo_tuned_v2"
   registry_model_name: "housing_price_predictor"
   model_output_dir: "models/production"
