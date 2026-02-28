@@ -81,6 +81,7 @@ CATEGORICAL_OPTIONS = dict(
         },
     )
 )
+VEGAS_DISTRICT_CENTROIDS = dict(getattr(feature_schema, "VEGAS_DISTRICT_CENTROIDS", {}))
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -295,7 +296,17 @@ def get_active_api_base_url() -> str:
 
 def build_api_payload(inputs: dict) -> dict:
     """Return payload expected by current API schema keys."""
-    return {k: v for k, v in inputs.items() if v is not None}
+    payload = {k: v for k, v in inputs.items() if v is not None}
+    if (
+        ("latitude" not in payload or "longitude" not in payload)
+        and "vegas_district" in payload
+        and payload["vegas_district"] in VEGAS_DISTRICT_CENTROIDS
+    ):
+        centroid = VEGAS_DISTRICT_CENTROIDS[payload["vegas_district"]]
+        payload.setdefault("latitude", float(centroid["latitude"]))
+        payload.setdefault("longitude", float(centroid["longitude"]))
+    payload.pop("vegas_district", None)
+    return payload
 
 
 def request_prediction(payload: dict) -> dict:
@@ -702,7 +713,8 @@ def main():
         
         **Core input features:**
         - Bedrooms, Bathrooms, Living Area
-        - Property Type, Vegas District
+        - Latitude, Longitude
+        - Property Type
         
         **Instructions:**
         1. Fill in all required property details

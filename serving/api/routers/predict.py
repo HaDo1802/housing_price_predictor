@@ -13,18 +13,29 @@ from serving.api.schemas import (
     HouseFeatures,
     PredictionResponse,
 )
-from housing_predictor.features.schema import API_TO_MODEL_FIELDS
+from housing_predictor.features.schema import (
+    API_TO_MODEL_FIELDS,
+    VEGAS_DISTRICT_CENTROIDS,
+)
 
 router = APIRouter(prefix="/predict", tags=["Prediction"])
 
 
 def _features_to_row(features):
     data = features.model_dump(by_alias=False)
-    return {
+    row = {
         model_key: data[api_key]
         for api_key, model_key in API_TO_MODEL_FIELDS.items()
         if api_key in data and data[api_key] is not None
     }
+    if row.get("latitude") is None or row.get("longitude") is None:
+        district = data.get("vegas_district")
+        if district:
+            centroid = VEGAS_DISTRICT_CENTROIDS.get(district)
+            if centroid:
+                row.setdefault("latitude", float(centroid["latitude"]))
+                row.setdefault("longitude", float(centroid["longitude"]))
+    return row
 
 
 def _get_top_features(pipeline):
@@ -40,7 +51,16 @@ async def predict(features: HouseFeatures, request: Request):
     if pipeline is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
-    df = pd.DataFrame([_features_to_row(features)])
+    row = _features_to_row(features)
+    if row.get("latitude") is None or row.get("longitude") is None:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "latitude and longitude are required. "
+                "For legacy requests, provide vegas_district with a known value."
+            ),
+        )
+    df = pd.DataFrame([row])
     preds, lower_bounds, upper_bounds = pipeline.predict_with_uncertainty(df)
     pred = float(preds[0])
     return PredictionResponse(
