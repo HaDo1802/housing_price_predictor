@@ -110,9 +110,7 @@ class ProductionPreprocessor:
 
         if self.verbose:
             logger.info(f"Using {len(self.numeric_features)} numeric features")
-            logger.info(
-                f"Using {len(self.categorical_features)} categorical features"
-            )
+            logger.info(f"Using {len(self.categorical_features)} categorical features")
 
     def _get_scaler(self):
         """Get the appropriate scaler based on configuration"""

@@ -54,7 +54,9 @@ async def predict(features: HouseFeatures, request: Request):
     )
 
 
-@router.post("/batch", response_model=BatchPredictionResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/batch", response_model=BatchPredictionResponse, status_code=status.HTTP_200_OK
+)
 async def predict_batch(request_body: BatchPredictionRequest, request: Request):
     pipeline = request.app.state.inference_pipeline
     if pipeline is None:
@@ -110,5 +112,9 @@ async def predict_file(request: Request, file: UploadFile = File(...)):
     out.to_csv(output, index=False)
     output.seek(0)
 
-    headers = {"Content-Disposition": f'attachment; filename="{Path(filename).stem}_predictions.csv"'}
-    return StreamingResponse(iter([output.getvalue()]), media_type="text/csv", headers=headers)
+    headers = {
+        "Content-Disposition": f'attachment; filename="{Path(filename).stem}_predictions.csv"'
+    }
+    return StreamingResponse(
+        iter([output.getvalue()]), media_type="text/csv", headers=headers
+    )

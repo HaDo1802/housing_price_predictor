@@ -20,7 +20,9 @@ def _to_builtin(value):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s"
+    )
     logging.getLogger("mlflow").setLevel(logging.WARNING)
     logging.getLogger("mlflow.store.db.utils").setLevel(logging.ERROR)
     logging.getLogger("alembic").setLevel(logging.ERROR)

@@ -39,7 +39,11 @@ app.include_router(predict_router)
 
 @app.get("/")
 async def root():
-    return {"message": "Housing Price Prediction API", "version": "1.0.0", "docs": "/docs"}
+    return {
+        "message": "Housing Price Prediction API",
+        "version": "1.0.0",
+        "docs": "/docs",
+    }
 
 
 @app.on_event("startup")
@@ -50,8 +54,12 @@ async def startup_event():
 
     for stage in stage_candidates:
         try:
-            app.state.inference_pipeline = InferencePipeline(model_name=model_name, stage=stage)
-            logger.info("Inference pipeline loaded (model=%s, stage=%s)", model_name, stage)
+            app.state.inference_pipeline = InferencePipeline(
+                model_name=model_name, stage=stage
+            )
+            logger.info(
+                "Inference pipeline loaded (model=%s, stage=%s)", model_name, stage
+            )
             return
         except Exception as exc:
             app.state.model_load_error = str(exc)
@@ -63,7 +71,10 @@ async def startup_event():
             )
 
     app.state.inference_pipeline = None
-    logger.error("Failed to load inference pipeline for all stage candidates: %s", stage_candidates)
+    logger.error(
+        "Failed to load inference pipeline for all stage candidates: %s",
+        stage_candidates,
+    )
 
 
 @app.exception_handler(Exception)

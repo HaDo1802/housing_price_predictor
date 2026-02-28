@@ -135,6 +135,7 @@ def load_config():
         st.error(f"Error loading configuration: {str(e)}")
         st.stop()
 
+
 @st.cache_data(ttl=60)
 def fetch_model_info(base_url: str):
     """Fetch model metadata from the FastAPI service"""
@@ -264,7 +265,9 @@ def request_file_prediction(file_name: str, file_bytes: bytes, mime_type: str) -
         if response.status_code == 200:
             return response.content
         logger.error(
-            "File prediction request failed: %s - %s", response.status_code, response.text
+            "File prediction request failed: %s - %s",
+            response.status_code,
+            response.text,
         )
         raise RuntimeError(response.text)
     except requests.RequestException as exc:
@@ -398,7 +401,9 @@ def create_input_form(config):
                         help_text = params.get("help")
                         if help_text is None:
                             if "SF" in feature or "Area" in feature:
-                                help_text = f"Enter the {feature.lower()} in square feet"
+                                help_text = (
+                                    f"Enter the {feature.lower()} in square feet"
+                                )
                             else:
                                 help_text = f"Enter {feature.lower()}"
                         input_params = {k: v for k, v in params.items() if k != "help"}
@@ -780,9 +785,7 @@ def main():
 
         if health is None:
             st.error("API is unreachable. Start FastAPI or fix `API_BASE_URL`.")
-            st.caption(
-                "Tried: " + ", ".join(f"`{url}`" for url in candidates)
-            )
+            st.caption("Tried: " + ", ".join(f"`{url}`" for url in candidates))
             model_info = None
         elif not health.get("model_loaded", False):
             st.warning("API is running, but model is not loaded on startup.")

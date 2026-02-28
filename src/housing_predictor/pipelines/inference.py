@@ -164,7 +164,9 @@ class InferencePipeline:
             with open(metadata_path, "r") as f:
                 self.metadata = json.load(f)
         else:
-            logger.warning("metadata.json not found at %s. Using empty dict.", metadata_path)
+            logger.warning(
+                "metadata.json not found at %s. Using empty dict.", metadata_path
+            )
             self.metadata = {}
 
         # Build a minimal version info stub so callers don't break
@@ -201,7 +203,9 @@ class InferencePipeline:
             upper = np.percentile(tree_preds, 97.5, axis=0) - preds
             return preds, lower, upper
 
-        logger.warning("Model does not support uncertainty estimation; returning flat bounds.")
+        logger.warning(
+            "Model does not support uncertainty estimation; returning flat bounds."
+        )
         zeros = np.zeros_like(preds)
         return preds, zeros, zeros
 
@@ -211,7 +215,8 @@ class InferencePipeline:
             self.preprocessor, "categorical_features"
         ):
             expected = set(
-                self.preprocessor.numeric_features + self.preprocessor.categorical_features
+                self.preprocessor.numeric_features
+                + self.preprocessor.categorical_features
             )
         else:
             expected = set(self.metadata.get("feature_names", []))
@@ -294,6 +299,7 @@ class InferencePipeline:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class _LocalVersionStub:
     """Minimal stand-in for MLflow ModelVersion when loading locally."""
 
@@ -328,6 +334,8 @@ def _load_pickle_with_compat(path: Path):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    pipeline = InferencePipeline(model_name="housing_price_predictor", stage="Production")
+    pipeline = InferencePipeline(
+        model_name="housing_price_predictor", stage="Production"
+    )
     print("Loaded from:", pipeline._loaded_from)
     print("Model info:", pipeline.get_model_info())

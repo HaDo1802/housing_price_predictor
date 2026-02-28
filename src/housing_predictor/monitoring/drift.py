@@ -6,7 +6,9 @@ import numpy as np
 import pandas as pd
 
 
-def compute_psi(reference: pd.Series, current: pd.Series, bins: int = 10) -> Optional[float]:
+def compute_psi(
+    reference: pd.Series, current: pd.Series, bins: int = 10
+) -> Optional[float]:
     """Compute Population Stability Index for a numeric feature."""
     reference = reference.dropna()
     current = current.dropna()
@@ -44,9 +46,8 @@ def evaluate_feedback(df: pd.DataFrame) -> dict:
         mask = df["suggested_min"].notna() & df["suggested_max"].notna()
         if mask.any():
             within = (
-                (df.loc[mask, "predicted_price"] >= df.loc[mask, "suggested_min"])
-                & (df.loc[mask, "predicted_price"] <= df.loc[mask, "suggested_max"])
-            )
+                df.loc[mask, "predicted_price"] >= df.loc[mask, "suggested_min"]
+            ) & (df.loc[mask, "predicted_price"] <= df.loc[mask, "suggested_max"])
             metrics["pred_within_user_range_rate"] = float(within.mean())
             metrics["avg_user_range_width"] = float(
                 (df.loc[mask, "suggested_max"] - df.loc[mask, "suggested_min"]).mean()
