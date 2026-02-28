@@ -11,7 +11,7 @@ from sklearn.ensemble import (
 )
 from sklearn.linear_model import Ridge
 
-MODEL_REGISTRY = {
+BASE_MODEL_REGISTRY = {
     "gradient_boosting": GradientBoostingRegressor,
     "hist_gradient_boosting": HistGradientBoostingRegressor,
     "random_forest": RandomForestRegressor,
@@ -29,23 +29,26 @@ class ModelTrainer:
         random_state: int = 42,
         use_log_target: bool = True,
     ):
-        if model_type not in MODEL_REGISTRY:
+        model_class = self._resolve_model_class(model_type)
+        if model_class is None:
             raise ValueError(
                 f"Unknown model_type: '{model_type}'. "
-                f"Choose from: {list(MODEL_REGISTRY.keys())}"
+                "Choose from: "
+                f"{list(BASE_MODEL_REGISTRY.keys()) + ['xgboost']}"
             )
 
-        model_class = MODEL_REGISTRY[model_type]
         model_params = dict(hyperparameters or {})
 
         valid_params = set(inspect.signature(model_class.__init__).parameters.keys())
         valid_params.discard("self")
-        invalid_params = sorted(set(model_params.keys()) - valid_params)
-        if invalid_params:
-            raise ValueError(
-                f"Invalid hyperparameters for '{model_type}': {invalid_params}. "
-                f"Allowed keys include: {sorted(valid_params)}"
-            )
+        has_kwargs = "kwargs" in valid_params
+        if not has_kwargs:
+            invalid_params = sorted(set(model_params.keys()) - valid_params)
+            if invalid_params:
+                raise ValueError(
+                    f"Invalid hyperparameters for '{model_type}': {invalid_params}. "
+                    f"Allowed keys include: {sorted(valid_params)}"
+                )
 
         if "random_state" in valid_params:
             model_params["random_state"] = random_state
@@ -65,6 +68,22 @@ class ModelTrainer:
             )
         else:
             self.model = self.base_model
+
+    @staticmethod
+    def _resolve_model_class(model_type: str):
+        if model_type in BASE_MODEL_REGISTRY:
+            return BASE_MODEL_REGISTRY[model_type]
+        if model_type == "xgboost":
+            try:
+                from xgboost import XGBRegressor
+
+                return XGBRegressor
+            except Exception as exc:
+                raise RuntimeError(
+                    "model_type='xgboost' requires a working xgboost runtime. "
+                    "Install xgboost and ensure OpenMP/libomp is available."
+                ) from exc
+        return None
 
     def fit(self, X_train, y_train):
         self.model.fit(X_train, y_train)
