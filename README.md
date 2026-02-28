@@ -4,7 +4,13 @@
 
 ![Project Cover](image/image.png)
 
-Turning famous **beginner house price prediction** problem into a **production-greate machine learning project implementating practical MLOps patterns** across the full lifecycle:
+
+
+- Live Space: https://housing-predictor-ui.onrender.com/
+- **Deployed API:** [https://realestatepredictor-81yl5mgxf-hado1802s-projects.vercel.app/](https://realestatepredictor-81yl5mgxf-hado1802s-projects.vercel.app/)  
+  *(Note: Please allow 10–15 seconds for the server to start up)*
+
+Transforming the classic **beginner house price prediction** problem into a **production-grade machine learning project** that implements practical MLOps patterns across the entire lifecycle:
 - config-oriented management using config.ymal 
 - modular data + feature pipelines
 - reproducible training and evaluation
@@ -13,6 +19,8 @@ Turning famous **beginner house price prediction** problem into a **production-g
 - FastAPI/UI serving 
 - feedback monitoring and drift checks
 - CI quality gates
+
+
 
 ## Project Goals
 
@@ -382,7 +390,5 @@ This project demonstrates practical skills in:
 ## Author
 
 Ha Do
-
 - GitHub: https://github.com/HaDo1802
-- Live Space: https://huggingface.co/spaces/HaDo1802/housing-predictor
-- Deployed API: https://realestatepredictor-81yl5mgxf-hado1802s-projects.vercel.app/
+- Email: havando1802@gmail.com
