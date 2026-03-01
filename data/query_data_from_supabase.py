@@ -1,11 +1,12 @@
 import os
 import logging
 from pathlib import Path
+from datetime import date
 
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
-
+from datetime import timedelta
 load_dotenv()
 
 logging.basicConfig(
@@ -14,6 +15,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+SNAPSHOT_DATE = (date.today() - timedelta(days=1)).isoformat()
 
 def _db_conn_kwargs() -> dict:
     return {
@@ -38,12 +40,12 @@ def _validate_db_env() -> None:
     logger.info("Supabase DB env validation passed.")
 
 
-def _run_sql(query: str) -> pd.DataFrame:
+def _run_sql(query: str, params: dict | None = None) -> pd.DataFrame:
     _validate_db_env()
     logger.info("Executing query against Supabase.")
     # Prefer SQLAlchemy engine to avoid pandas DBAPI2 warning.
     try:
-        from sqlalchemy import create_engine
+        from sqlalchemy import create_engine, text
 
         cfg = _db_conn_kwargs()
         db_url = (
@@ -53,7 +55,8 @@ def _run_sql(query: str) -> pd.DataFrame:
         )
         engine = create_engine(db_url)
         with engine.connect() as conn:
-            df = pd.read_sql_query(query, conn)
+            sql = text(query)
+            df = pd.read_sql_query(sql, conn, params=params)
             logger.info("Query completed via SQLAlchemy. Rows fetched: %d", len(df))
             return df
     except Exception as exc:
@@ -62,14 +65,14 @@ def _run_sql(query: str) -> pd.DataFrame:
         )
         # Fallback keeps script functional if SQLAlchemy is unavailable.
         with psycopg2.connect(**_db_conn_kwargs()) as conn:
-            df = pd.read_sql_query(query, conn)
+            df = pd.read_sql_query(query, conn, params=params)
             logger.info(
                 "Query completed via psycopg2 fallback. Rows fetched: %d", len(df)
             )
             return df
 
 
-def load_dashboard_df() -> pd.DataFrame:
+def load_dashboard_df(snapshot_date: str | None = None) -> pd.DataFrame:
     query = """
         select
             f.price,
@@ -88,12 +91,18 @@ def load_dashboard_df() -> pd.DataFrame:
         left join gold.dim_date dd
             on dd.date_day = f.snapshot_date
     """
-    return _run_sql(query)
+    params = None
+    if snapshot_date:
+        query += "\nwhere f.snapshot_date <= %(snapshot_date)s"
+        params = {"snapshot_date": snapshot_date}
+        logger.info("Applying snapshot_date filter: %s", snapshot_date)
+    return _run_sql(query, params=params)
 
 
 if __name__ == "__main__":
     logger.info("Starting Supabase extract job.")
-    data = load_dashboard_df()
+    selected_date = SNAPSHOT_DATE
+    data = load_dashboard_df(snapshot_date=selected_date)
     project_root = Path(__file__).resolve().parents[1]
     output_path = project_root / "data" / "raw" / "data_master.csv"
     output_path.parent.mkdir(parents=True, exist_ok=True)
