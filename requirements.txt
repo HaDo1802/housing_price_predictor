@@ -7,8 +7,6 @@ joblib==1.5.3
 fastapi==0.117.1
 fastapi-cli==0.0.13
 flake8==7.3.0
-Flask==3.1.2
-flask-cors==6.0.2
 seaborn==0.13.2
 matplotlib==3.10.5
 pyyaml==6.0.2

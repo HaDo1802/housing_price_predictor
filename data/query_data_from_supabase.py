@@ -46,12 +46,17 @@ def _run_sql(query: str, params: dict | None = None) -> pd.DataFrame:
     # Prefer SQLAlchemy engine to avoid pandas DBAPI2 warning.
     try:
         from sqlalchemy import create_engine, text
+        from sqlalchemy.engine import URL
 
         cfg = _db_conn_kwargs()
-        db_url = (
-            f"postgresql+psycopg2://{cfg['user']}:{cfg['password']}"
-            f"@{cfg['host']}:{cfg['port']}/{cfg['dbname']}"
-            f"?sslmode={cfg['sslmode']}"
+        db_url = URL.create(
+            drivername="postgresql+psycopg2",
+            username=cfg["user"],
+            password=cfg["password"],
+            host=cfg["host"],
+            port=int(cfg["port"]) if cfg.get("port") else None,
+            database=cfg["dbname"],
+            query={"sslmode": cfg["sslmode"]},
         )
         engine = create_engine(db_url)
         with engine.connect() as conn:

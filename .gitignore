@@ -23,3 +23,7 @@ learning.md
 /models/
 .github/
 docs/
+.env
+docker/postgres-data/
+logs/
+plugins/
