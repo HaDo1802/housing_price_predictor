@@ -15,12 +15,10 @@ Usage:
     streamlit run serving/app/streamlit_app.py
 """
 
-import json
 import logging
 import os
 import sys
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -40,7 +38,6 @@ for p in (PROJECT_ROOT, SRC_ROOT):
         sys.path.insert(0, p_str)
 
 from housing_predictor.features import schema as feature_schema
-from housing_predictor.monitoring.feedback_collector import save_feedback_record
 
 NUMERIC_FEATURES = list(
     getattr(
@@ -598,96 +595,6 @@ def display_prediction_results(
     )
 
 
-def build_feedback_record(
-    inputs: dict,
-    prediction_id: str,
-    prediction: float,
-    lower: float,
-    upper: float,
-    agree: bool,
-    suggested_min: Optional[float],
-    suggested_max: Optional[float],
-) -> dict:
-    """Build a feedback record for storage"""
-    return {
-        "feedback_id": str(uuid.uuid4()),
-        "prediction_id": prediction_id,
-        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "agree_with_prediction": agree,
-        "predicted_price": float(prediction),
-        "lower_bound": float(lower),
-        "upper_bound": float(upper),
-        "suggested_min": suggested_min,
-        "suggested_max": suggested_max,
-        "input_features": json.dumps(inputs),
-    }
-
-
-def render_feedback_form(inputs: dict, result: dict) -> None:
-    """Render feedback collection UI and persist feedback"""
-    st.markdown("## 📝 Feedback")
-    st.markdown(
-        "Do you agree with the prediction? Your feedback helps improve the model."
-    )
-
-    agree_choice = st.radio(
-        "Do you agree with the prediction?",
-        options=["Yes, I agree", "No, I disagree"],
-        horizontal=True,
-        key="feedback_agree_choice",
-    )
-
-    suggested_min = None
-    suggested_max = None
-
-    if agree_choice == "No, I disagree":
-        st.markdown("What price range do you believe is more accurate?")
-        col1, col2 = st.columns(2)
-        with col1:
-            suggested_min = st.number_input(
-                "Suggested minimum price",
-                min_value=0.0,
-                value=0.0,
-                step=1000.0,
-                key="suggested_min_price",
-            )
-        with col2:
-            suggested_max = st.number_input(
-                "Suggested maximum price",
-                min_value=0.0,
-                value=0.0,
-                step=1000.0,
-                key="suggested_max_price",
-            )
-
-    if st.button("Submit feedback"):
-        agree = agree_choice == "Yes, I agree"
-
-        if not agree:
-            if suggested_min is None or suggested_max is None:
-                st.error("Please provide a suggested price range.")
-                return
-            if suggested_min <= 0 or suggested_max <= 0:
-                st.error("Suggested range must be greater than 0.")
-                return
-            if suggested_min > suggested_max:
-                st.error("Suggested minimum must be less than or equal to maximum.")
-                return
-
-        record = build_feedback_record(
-            inputs=inputs,
-            prediction_id=result["prediction_id"],
-            prediction=result["prediction"],
-            lower=result["lower"],
-            upper=result["upper"],
-            agree=agree,
-            suggested_min=suggested_min if not agree else None,
-            suggested_max=suggested_max if not agree else None,
-        )
-        save_feedback_record(record)
-        st.success("✅ Thanks! Your feedback has been recorded.")
-
-
 def main():
     """Main application logic"""
 
@@ -927,10 +834,6 @@ def main():
             file_name="house_price_prediction.csv",
             mime="text/csv",
         )
-
-        # Feedback collection
-        st.markdown("---")
-        render_feedback_form(last_inputs, result)
 
     # Footer
     st.markdown("---")
