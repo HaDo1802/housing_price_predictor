@@ -7,6 +7,7 @@ import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
 from datetime import timedelta
+
 load_dotenv()
 
 logging.basicConfig(
@@ -16,6 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 SNAPSHOT_DATE = (date.today() - timedelta(days=1)).isoformat()
+
 
 def _db_conn_kwargs() -> dict:
     return {

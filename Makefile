@@ -5,6 +5,7 @@ PYTHON ?= python3
 PIP ?= $(PYTHON) -m pip
 
 SRC := src serving pipelines conf
+QUALITY_TARGETS := src data tests serving pipelines api
 TEST_DIR := tests
 
 .PHONY: help install lint format test clean all vercel-preview vercel-prod
@@ -25,11 +26,11 @@ install:
 	$(PIP) install -r requirements.txt
 
 lint:
-	$(PYTHON) -m flake8 $(SRC) --max-line-length 100 --extend-ignore=E501,E402,F401,F541,W291,W293
+	$(PYTHON) -m flake8 $(QUALITY_TARGETS) --max-line-length 120 --extend-ignore=E501,E402,F401,F541,W291,W293
 	
 
 format:
-	$(PYTHON) -m black $(SRC)
+	$(PYTHON) -m black $(QUALITY_TARGETS)
 
 test:
 	@if [ -n "$(TEST_DIR)" ]; then $(PYTHON) -m pytest $(TEST_DIR) -v; else echo "No test/ or tests/ directory found."; fi

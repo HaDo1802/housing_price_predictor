@@ -28,3 +28,12 @@ docker/postgres-data/
 logs/
 plugins/
 notebooks/
+render.yaml
+mlflow_airflow.db
+vercel.json
+docs/
+api/
+.vercelignore
+pyproject.toml
+.dockerignore
+.gitattributes
