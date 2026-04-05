@@ -1,6 +1,6 @@
-# Simplified Configuration for Single Model Training
+# Configuration — single source of truth for training pipeline.
+# Column names match gold.mart_property_current exactly.
 
-# Data Configuration
 data:
   raw_data_path: "data/raw/data_master.csv"
   target_column: "price"
@@ -12,22 +12,29 @@ features:
   numeric:
     - "bedrooms"
     - "bathrooms"
-    - "livingarea"
+    - "living_area"                # was: livingarea (old alias)
     - "latitude"
     - "longitude"
-
+    - "normalized_lot_area_value"  # new: lot size is real signal
+    - "days_on_zillow"             # new: market signal (stale = overpriced)
   categorical:
-    - "propertytype"
+    - "property_type"              # was: propertytype (old alias)
+    - "vegas_district"             # new: stronger signal than lat/lon alone
 
-# Preprocessing Configuration
 preprocessing:
   handle_missing: "mean"
-  handle_outliers: false
+  handle_outliers: true
+  outlier_method: "ppsf_band"     # filter on price-per-sqft, not raw IQR
+  outlier_ppsf_min: 80.0          # below = data error or land-only listing
+  outlier_ppsf_max: 800.0         # above = ultra-luxury, too few to learn from
+  outlier_min_livingarea: 400.0
+  exclude_property_types:
+    - "MOBILE"                    # different market (lot-lease), median $124k vs $490k
   scale_features: true
   scaling_method: "standard"
   encode_categorical: true
   encoding_method: "onehot"
-  target_transform: "log1p"
+  target_transform: "log1p"       # price is right-skewed, log stabilises variance
   interval_num_segments: 5
   interval_min_segment_size: 10
 
@@ -41,9 +48,8 @@ model:
     min_samples_leaf: 8
     l2_regularization: 0.0
 
-# Training Configuration
 training:
-  experiment_name: "house_price_prediction_test_2"
-  run_name: "hgb_no_geo_tuned_v2"
+  experiment_name: "house_price_prediction"
+  run_name: "hgb_v2_new_features"
   registry_model_name: "housing_price_predictor"
   model_output_dir: "models/production"

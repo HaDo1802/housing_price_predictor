@@ -63,7 +63,7 @@ The codebase is intentionally separated by responsibility:
 - `src/housing_predictor/`: core ML package logic (reusable + testable).
 - `pipelines/`: operational entrypoints for jobs (train, tune, promote, monitor).
 - `serving/`: online inference layer (FastAPI + Streamlit + Vercel entrypoint).
-- `conf/`: configuration as code with base + environment overrides.
+- `conf/`: single-file configuration in `conf/config.yaml`.
 - `tests/`: unit + integration tests to protect behavior.
 
 This structure scales better than notebook-centric projects because each concern evolves independently:
@@ -74,18 +74,16 @@ This structure scales better than notebook-centric projects because each concern
 
 ## MLOps Practices Implemented
 
-### 1) Configuration Layering and Environment Overrides
+### 1) Single-File Configuration
 
-Implemented in [config_manager.py](src/housing_predictor/config_manager.py) with layered config loading:
+Implemented in [config_manager.py](src/housing_predictor/config_manager.py) with a single YAML source:
 
-- base config from `conf/base/*.yaml`
-- environment override from `conf/local/` or `conf/production/`
-- final override from `conf/config.yaml`
+- `conf/config.yaml`
 
 Why this pattern matters:
 
-- lets one codebase run in local, CI, and production contexts
-- avoids hard-coding paths/hyperparameters
+- keeps training configuration explicit and easy to audit
+- avoids hard-coding paths and hyperparameters
 - improves reproducibility and auditability
 
 ### 2) Leakage-Safe Data and Feature Pipeline

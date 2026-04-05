@@ -25,6 +25,7 @@ class PreprocessingConfig:
     outlier_ppsf_min: float = 80.0
     outlier_ppsf_max: float = 1000.0
     outlier_min_livingarea: float = 100.0
+    exclude_property_types: list[str] = field(default_factory=list)
     scale_features: bool = True
     scaling_method: str = "standard"
     encode_categorical: bool = True
@@ -71,82 +72,22 @@ class MLConfig:
 
 
 class ConfigManager:
-    """Loads single-file config or layered conf/base + env overrides."""
+    """Loads a single YAML config file."""
 
-    def __init__(self, config_path: str = "conf/config.yaml", env: str | None = None):
+    def __init__(self, config_path: str = "conf/config.yaml"):
         self.config_path = Path(config_path)
-        self.env = env
         self.config = self._load_config()
 
-    def _load_yaml(self, path: Path) -> dict:
-        if not path.exists():
-            return {}
-        with open(path, "r") as f:
-            return yaml.safe_load(f) or {}
-
-    @staticmethod
-    def _normalize_features(raw_features: dict) -> dict:
-        """Accept both {'numeric':...} and {'features': {'numeric':...}} shapes."""
-        if not raw_features:
-            return {}
-        if "features" in raw_features and "numeric" not in raw_features:
-            return raw_features.get("features") or {}
-        return raw_features
-
-    def _load_layered_config(self) -> dict:
-        root = self.config_path.parent
-        base_dir = root / "base"
-        env_name = self.env or "local"
-
-        # Step 1: load base config
-        cfg = {
-            "data": self._load_yaml(base_dir / "data.yaml"),
-            "features": self._normalize_features(
-                self._load_yaml(base_dir / "features.yaml")
-            ),
-            "preprocessing": self._load_yaml(base_dir / "preprocessing.yaml"),
-            "model": self._load_yaml(base_dir / "model.yaml"),
-            "training": self._load_yaml(base_dir / "training.yaml"),
-        }
-        # Step 2: override with environment-specific values
-        env_data = self._load_yaml(root / env_name / "data.yaml")
-        cfg["data"].update(env_data)
-        # Step 3: override with whatever is in config.yaml  ← THIS WAS MISSING
-        main_config = self._load_yaml(root / "config.yaml")
-
-        if "features" in main_config:
-            main_config["features"] = self._normalize_features(main_config["features"])
-
-        # Backward compatibility for flat model keys in conf/config.yaml
-        if "model" not in main_config:
-            flat_model = {}
-            if "model_type" in main_config:
-                flat_model["model_type"] = main_config["model_type"]
-            if "hyperparameters" in main_config:
-                flat_model["hyperparameters"] = main_config["hyperparameters"]
-            if "random_state" in main_config:
-                flat_model["random_state"] = main_config["random_state"]
-            if flat_model:
-                main_config["model"] = flat_model
-
-        for section in ["data", "features", "preprocessing", "model", "training"]:
-            if section in main_config and main_config[section]:
-                cfg[section].update(main_config[section])
-        return cfg
-
     def _load_config(self) -> MLConfig:
-        if self.config_path.is_dir() or (self.config_path.parent / "base").exists():
-            config_dict = self._load_layered_config()
-        else:
-            if not self.config_path.exists():
-                raise FileNotFoundError(f"Config file not found: {self.config_path}")
-            config_dict = self._load_yaml(self.config_path)
+        if not self.config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {self.config_path}")
+
+        with open(self.config_path, "r") as f:
+            config_dict = yaml.safe_load(f) or {}
 
         return MLConfig(
             data=DataConfig(**config_dict["data"]),
-            features=FeatureSelectionConfig(
-                **self._normalize_features(config_dict.get("features", {}))
-            ),
+            features=FeatureSelectionConfig(**config_dict.get("features", {})),
             preprocessing=PreprocessingConfig(**config_dict["preprocessing"]),
             model=ModelConfig(**config_dict["model"]),
             training=TrainingConfig(**config_dict["training"]),

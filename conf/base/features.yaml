@@ -1,9 +1,0 @@
-features:
-  numeric:
-    - "bedrooms"
-    - "bathrooms"
-    - "livingarea"
-    - "latitude"
-    - "longitude"
-  categorical:
-    - "propertytype"

@@ -1,53 +1,115 @@
 """Shared feature schema and API field mappings."""
 
-MODEL_FEATURES = [
-    "bedrooms",
-    "bathrooms",
-    "livingarea",
-    "latitude",
-    "longitude",
-    "propertytype",
-]
-
-API_TO_MODEL_FIELDS = {
-    "bedrooms": "bedrooms",
-    "bathrooms": "bathrooms",
-    "livingarea": "livingarea",
-    "living_area": "livingarea",
-    "latitude": "latitude",
-    "longitude": "longitude",
-    "propertytype": "propertytype",
-    "property_type": "propertytype",
-}
+# ---------------------------------------------------------------------------
+# Core feature lists — single source of truth used by preprocessor,
+# training config, and API serving layer.
+# Column names match gold.mart_property_current exactly.
+# ---------------------------------------------------------------------------
 
 NUMERIC_FEATURES = [
     "bedrooms",
     "bathrooms",
-    "livingarea",
+    "living_area",
     "latitude",
     "longitude",
+    "normalized_lot_area_value",
+    "days_on_zillow",
 ]
 
 CATEGORICAL_FEATURES = [
-    "propertytype",
+    "property_type",
+    "vegas_district",
 ]
+
+MODEL_FEATURES = NUMERIC_FEATURES + CATEGORICAL_FEATURES
+
+TARGET_COLUMN = "price"
+
+# ---------------------------------------------------------------------------
+# Columns to drop before training — zero variance, leakage, or identifiers
+# ---------------------------------------------------------------------------
+
+DROP_COLUMNS = [
+    "property_id",
+    "snapshot_date",
+    "street_address",
+    "city",
+    "state",
+    "zip_code",           # 8 missing, weaker signal than vegas_district + lat/lon
+    "zestimate",          # 100% null
+    "rentzestimate",      # 100% null
+    "listing_status",     # 100% FOR_SALE — zero variance
+    "normalized_lot_area_unit",  # 100% sqft — zero variance
+    "price_per_sqft",     # derived from price/living_area — data leakage
+]
+
+# ---------------------------------------------------------------------------
+# Outlier filter bounds — applied to training split only (never to test/prod)
+# ---------------------------------------------------------------------------
+
+OUTLIER_FILTERS = {
+    "price_per_sqft_min": 80.0,    # below this = data error or land-only
+    "price_per_sqft_max": 800.0,   # above this = ultra-luxury, distorts model
+    "living_area_min": 400.0,      # below this = unrealistic
+    "bedrooms_max": 10,            # above this = mansion/multi-unit, small sample
+    "bathrooms_max": 10,
+}
+
+# Property types to exclude from training (too few rows or fundamentally different market)
+EXCLUDED_PROPERTY_TYPES = [
+    "MOBILE",       # priced off lot-lease, not sqft — median $124k vs $490k overall
+]
+
+# ---------------------------------------------------------------------------
+# API field mappings (kept for serving layer compatibility)
+# ---------------------------------------------------------------------------
+
+API_TO_MODEL_FIELDS = {
+    "bedrooms": "bedrooms",
+    "bathrooms": "bathrooms",
+    "living_area": "living_area",
+    "livingarea": "living_area",      # backward compat for old API clients
+    "latitude": "latitude",
+    "longitude": "longitude",
+    "normalized_lot_area_value": "normalized_lot_area_value",
+    "days_on_zillow": "days_on_zillow",
+    "property_type": "property_type",
+    "propertytype": "property_type",  # backward compat
+    "vegas_district": "vegas_district",
+}
 
 FEATURE_DISPLAY_LABELS = {
     "bedrooms": "Bedrooms",
     "bathrooms": "Bathrooms",
-    "livingarea": "Living Area (sqft)",
+    "living_area": "Living Area (sqft)",
     "latitude": "Latitude",
     "longitude": "Longitude",
-    "propertytype": "Property Type",
+    "normalized_lot_area_value": "Lot Size (sqft)",
+    "days_on_zillow": "Days on Market",
+    "property_type": "Property Type",
+    "vegas_district": "District",
 }
 
 CATEGORICAL_OPTIONS = {
-    "propertytype": [
+    "property_type": [
         "SINGLE_FAMILY",
         "TOWNHOUSE",
         "CONDO",
         "MULTI_FAMILY",
-        "MOBILE",
+    ],
+    "vegas_district": [
+        "Summerlin",
+        "Centennial",
+        "Winchester",
+        "Spring Valley",
+        "Enterprise",
+        "Mountains Edge",
+        "Downtown Las Vegas",
+        "Paradise",
+        "Green Valley",
+        "North Las Vegas",
+        "The Strip",
+        "Anthem",
     ],
 }
 
@@ -66,5 +128,3 @@ VEGAS_DISTRICT_CENTROIDS = {
     "Winchester": {"latitude": 36.1420, "longitude": -115.0987},
     "Anthem": {"latitude": 35.9853, "longitude": -115.1017},
 }
-
-TARGET_COLUMN = "price"
