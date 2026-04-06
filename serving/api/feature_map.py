@@ -8,7 +8,6 @@ API_TO_MODEL_FIELDS = {
     "latitude": "latitude",
     "longitude": "longitude",
     "normalized_lot_area_value": "normalized_lot_area_value",
-    "days_on_zillow": "days_on_zillow",
     "property_type": "property_type",
     "propertytype": "property_type",  # backward compat
     "vegas_district": "vegas_district",
@@ -21,7 +20,6 @@ FEATURE_DISPLAY_LABELS = {
     "latitude": "Latitude",
     "longitude": "Longitude",
     "normalized_lot_area_value": "Lot Size (sqft)",
-    "days_on_zillow": "Days on Market",
     "property_type": "Property Type",
     "vegas_district": "District",
 }

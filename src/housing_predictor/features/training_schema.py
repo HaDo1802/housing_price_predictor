@@ -7,7 +7,6 @@ NUMERIC_FEATURES = [
     "latitude",
     "longitude",
     "normalized_lot_area_value",
-    "days_on_zillow",
 ]
 
 CATEGORICAL_FEATURES = [
@@ -30,6 +29,7 @@ DROP_COLUMNS = [
     "rentzestimate",  # 100% null
     "listing_status",  # 100% FOR_SALE — zero variance
     "normalized_lot_area_unit",  # 100% sqft — zero variance
+    "days_on_zillow",  # weak / unstable market-timing signal
     "price_per_sqft",  # derived from price/living_area — data leakage
 ]
 

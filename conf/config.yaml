@@ -16,7 +16,6 @@ features:
     - "latitude"
     - "longitude"
     - "normalized_lot_area_value"  # new: lot size is real signal
-    - "days_on_zillow"             # new: market signal (stale = overpriced)
   categorical:
     - "property_type"              # was: propertytype (old alias)
     - "vegas_district"             # new: stronger signal than lat/lon alone
