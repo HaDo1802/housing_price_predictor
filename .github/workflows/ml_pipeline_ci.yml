@@ -1,11 +1,13 @@
 name: ml-pipeline-ci
 
+# on:
+#   push:
+#     branches: ["main", "master"]
+#   pull_request:
+#     branches: ["main", "master"]
 on:
-  push:
-    branches: ["main", "master"]
-  pull_request:
-    branches: ["main", "master"]
-
+  workflow_dispatch:
+    
 env:
   PYTHON_VERSION: "3.12"
   PYTHONPATH: "src"
