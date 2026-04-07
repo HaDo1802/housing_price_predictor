@@ -5,8 +5,8 @@
 ![Project Cover](image/architecture.png)
 
 
-The systems is currently down for infa refactoring! It would be back soon!
-- Live Space: https://housing-predictor-ui.onrender.com/
+The system is currently under infrastructure refactoring.
+- Streamlit UI: deploy from `serving/app/streamlit_app.py`
 - **Deployed API:** [https://realestatepredictor-81yl5mgxf-hado1802s-projects.vercel.app/](https://realestatepredictor-81yl5mgxf-hado1802s-projects.vercel.app/)  
   *(Note: Please allow 10–15 seconds for the server to start up)*
 
@@ -60,8 +60,8 @@ Core goals:
 
 The codebase is intentionally separated by responsibility:
 
-- `src/housing_predictor/`: core ML package logic (reusable + testable).
-- `pipelines/`: operational entrypoints for jobs (train, tune, promote, monitor).
+- `src/predictor/`: core ML package logic (reusable + testable).
+- `scripts/`: operational entrypoints for jobs (train, promote, sync artifacts).
 - `serving/`: online inference layer (FastAPI + Streamlit + Vercel entrypoint).
 - `conf/`: single-file configuration in `conf/config.yaml`.
 - `tests/`: unit + integration tests to protect behavior.
@@ -76,7 +76,7 @@ This structure scales better than notebook-centric projects because each concern
 
 ### 1) Single-File Configuration
 
-Implemented in [config_manager.py](src/housing_predictor/config_manager.py) with a single YAML source:
+Implemented in [config.py](src/predictor/config.py) with a single YAML source:
 
 - `conf/config.yaml`
 
@@ -90,9 +90,9 @@ Why this pattern matters:
 
 Implemented across:
 
-- [splitter.py](src/housing_predictor/data/splitter.py)
-- [preprocessor.py](src/housing_predictor/features/preprocessor.py)
-- [training.py](src/housing_predictor/pipelines/training.py)
+- [data_ingest.py](src/predictor/data_ingest.py)
+- [preprocessor.py](src/predictor/preprocessor.py)
+- [training_pipeline.py](src/predictor/training_pipeline.py)
 
 Key practice:
 
@@ -108,7 +108,7 @@ Why this pattern matters:
 
 ### 3) Reproducible Model Factory + Validation
 
-Implemented in [trainer.py](src/housing_predictor/models/trainer.py):
+Implemented in [models.py](src/predictor/models.py):
 
 - model type registry (`random_forest`, `ridge`, `gradient_boosting`, `hist_gradient_boosting`), as user can choose mulitple models for testing purpose
 - hyperparameter validation against sklearn constructor signatures
@@ -125,8 +125,8 @@ Why this pattern matters:
 
 Implemented in:
 
-- [training.py](src/housing_predictor/pipelines/training.py)
-- [registry.py](src/housing_predictor/models/registry.py)
+- [training_pipeline.py](src/predictor/training_pipeline.py)
+- [registry.py](src/predictor/registry.py)
 
 Tracked in MLflow:
 
@@ -140,7 +140,7 @@ Why this pattern matters:
 
 ### 5) Metric Gate Before Promotion
 
-Implemented in [check_metric.py](src/housing_predictor/models/check_metric.py):
+Implemented in [registry.py](src/predictor/registry.py):
 
 - compare candidate metric vs current production metric
 - promote only if threshold is exceeded
@@ -157,11 +157,11 @@ Why this pattern matters:
 
 ### 6) Artifact Strategy for Serving Reliability
 
-Implemented in [promote.py](src/housing_predictor/models/promote.py) and [inference.py](src/housing_predictor/pipelines/inference.py):
+Implemented in [promote.py](scripts/promote.py) and [predict.py](src/predictor/predict.py):
 
 - save local production artifacts (`model.pkl`, `preprocessor.pkl`, `metadata.json`, `config.yaml`)
 - online inference tries MLflow registry first
-- fallback to local production artifacts when MLflow is unavailable
+- fallback to S3 production artifacts, then local production artifacts when MLflow is unavailable
 
 Why this pattern matters:
 
@@ -196,7 +196,7 @@ Why this pattern matters:
 
 Implemented in:
 
-- [drift.py](src/housing_predictor/monitoring/drift.py)
+- [drift.py](src/predictor/drift.py)
 
 Current monitoring includes:
 
@@ -242,19 +242,14 @@ Raw data
 ```text
 .
 ├── api/                         # Vercel-compatible entrypoint
-├── conf/                        # Layered configuration (base/local/production)
+├── conf/                        # Single YAML configuration
 ├── data/                        # Raw, processed, sample, and feedback datasets
 ├── docker/                      # Dockerfiles + compose setup
 ├── image/                       # Cover image and media assets
 ├── notebooks/                   # Exploration and experimentation notebooks
-├── pipelines/                   # CLI/job scripts (train, tune, promote, monitor)
+├── scripts/                     # CLI/job scripts (train, promote, sync artifacts)
 ├── serving/                     # FastAPI service + Streamlit app + Vercel app
-├── src/housing_predictor/       # Core ML package
-│   ├── data/
-│   ├── features/
-│   ├── models/
-│   ├── monitoring/
-│   └── pipelines/
+├── src/predictor/               # Core ML package
 ├── tests/                       # Unit + integration tests
 ├── Makefile
 ├── pyproject.toml
@@ -283,7 +278,7 @@ make test
 ### 3) Train Model Pipeline
 
 ```bash
-python pipelines/run_training.py
+python scripts/train.py
 ```
 
 ### 4) Inspect MLflow
@@ -311,26 +306,20 @@ make ui
 - Train pipeline:
 
 ```bash
-python pipelines/run_training.py
-```
-
-- Hyperparameter search:
-
-```bash
-python pipelines/run_tuning.py
+python scripts/train.py
 ```
 
 - Promote model / sync production artifacts:
 
 ```bash
-python pipelines/run_promote.py --list-only
-python pipelines/run_promote.py --model-name housing_price_predictor --version 3 --stage Production
+python scripts/promote.py --model-name housing_price_predictor --version 1 --stage Production
+python scripts/upload_production_to_s3.py
 ```
 
 - Drift check utility:
 
 ```bash
-python src/housing_predictor/monitoring/drift.py
+python -m predictor.drift
 ```
 
 ## API Endpoints
