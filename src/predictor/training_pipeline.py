@@ -28,7 +28,7 @@ class TrainingPipeline:
     def __init__(self, config_path: str = "conf/config.yaml"):
         self.config_path = Path(config_path)
         self.config_manager = ConfigManager(str(self.config_path))
-        self.config: MLConfig = self.config_manager.get_config()
+        self.config: MLConfig = self.config_manager.config
 
         self.data_ingestor = DataIngestor(self.config)
         self.preprocessor = ProductionPreprocessor(

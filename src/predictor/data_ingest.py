@@ -63,7 +63,7 @@ class DataIngestor:
         if exclude_types and "property_type" in cleaned.columns:
             cleaned = cleaned[~cleaned["property_type"].isin(exclude_types)]
 
-        cleaned.loc[:, NUMERIC_FEATURES] = cleaned[NUMERIC_FEATURES].astype("float64")
+        cleaned[NUMERIC_FEATURES] = cleaned[NUMERIC_FEATURES].astype("float64")
         
         return cleaned
 

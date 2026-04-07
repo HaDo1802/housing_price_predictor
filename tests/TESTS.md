@@ -16,10 +16,14 @@ What each test file protects
   Protects the serving alias layer. API field aliases and display metadata must always map back to real training features.
 - `tests/unit/api/test_schemas.py`
   Protects request validation and backward compatibility. New optional fields must not break older clients, while invalid core inputs must still fail.
-- `tests/unit/data/test_splitter.py`
-  Protects split shapes and target alignment.
+- `tests/unit/data/test_data_ingest.py`
+  Protects business cleaning, strict training-column selection, and outlier-ready dataset shape before the pipeline splits data.
 - `tests/unit/models/test_evaluator.py`
   Protects metric output shape for downstream logging and reporting.
+- `tests/unit/mlops/test_registry.py`
+  Protects promotion governance. Candidate runs should only register and promote when they beat Production policy.
+- `tests/unit/mlops/test_artifact_store.py`
+  Protects production artifact delivery. The local production snapshot must always be reconstructed from the Production-staged MLflow model.
 - `tests/integration/test_train_serve_contract.py`
   Protects the most important end-to-end path: training artifacts produced by the training code can be loaded and used by the production inference pipeline.
 
