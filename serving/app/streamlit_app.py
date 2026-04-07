@@ -37,7 +37,7 @@ for p in (PROJECT_ROOT, SRC_ROOT):
     if p_str not in sys.path:
         sys.path.insert(0, p_str)
 
-from housing_predictor.features.training_schema import (
+from predictor.schema import (
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
 )

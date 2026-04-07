@@ -4,8 +4,8 @@ import pickle
 import numpy as np
 import yaml
 
-from housing_predictor.pipelines.inference import InferencePipeline
-from housing_predictor.pipelines.training import TrainingPipeline
+from predictor.predict import InferencePipeline
+from predictor.training_pipeline import TrainingPipeline
 
 
 def test_training_artifacts_can_be_loaded_by_inference_pipeline(tmp_path, raw_training_df):
@@ -22,7 +22,6 @@ def test_training_artifacts_can_be_loaded_by_inference_pipeline(tmp_path, raw_tr
 
     config["data"]["raw_data_path"] = str(data_path)
     config["preprocessing"]["handle_outliers"] = False
-    config["model"]["model_type"] = "ridge"
     config["model"]["hyperparameters"] = {}
 
     config_path = tmp_path / "config.yaml"

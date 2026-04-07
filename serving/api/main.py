@@ -18,7 +18,7 @@ for p in (PROJECT_ROOT, SRC_ROOT):
 from serving.api.routers.health import router as health_router
 from serving.api.routers.model import router as model_router
 from serving.api.routers.predict import router as predict_router
-from housing_predictor.pipelines.inference import InferencePipeline
+from predictor.predict import InferencePipeline
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

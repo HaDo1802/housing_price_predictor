@@ -40,7 +40,7 @@ def log_trigger_context_task(**context) -> None:
 def _build_pipeline():
     from pathlib import Path
 
-    from housing_predictor.pipelines.training import TrainingPipeline
+    from predictor.training_pipeline import TrainingPipeline
 
     # Ensure relative paths in config resolve from project root in container.
     os.chdir(PROJECT_ROOT)
@@ -178,7 +178,7 @@ def build_retraining_dag():
         start_date=datetime(2025, 1, 1),
         schedule=None,
         catchup=False,
-        tags=["mlops", "housing_predictor", "training"],
+        tags=["mlops", "predictor", "training"],
     ) as dag:
         log_trigger_context = PythonOperator(
             task_id="log_trigger_context",

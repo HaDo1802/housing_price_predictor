@@ -1,4 +1,4 @@
-from housing_predictor.models.evaluator import regression_metrics
+from predictor.utils import regression_metrics
 
 
 def test_regression_metrics_keys():

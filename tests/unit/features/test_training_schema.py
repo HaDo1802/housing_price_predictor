@@ -1,4 +1,4 @@
-from housing_predictor.features.training_schema import (
+from predictor.schema import (
     CATEGORICAL_FEATURES,
     DROP_COLUMNS,
     MODEL_FEATURES,

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Request
 
-from housing_predictor.features.training_schema import (
+from predictor.schema import (
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
 )

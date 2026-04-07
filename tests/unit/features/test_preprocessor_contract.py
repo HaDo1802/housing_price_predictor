@@ -1,6 +1,6 @@
 import pytest
 
-from housing_predictor.features.preprocessor import ProductionPreprocessor
+from predictor.preprocessor import ProductionPreprocessor
 
 
 def test_preprocessor_fits_on_canonical_training_columns(sample_housing_df):

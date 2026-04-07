@@ -10,7 +10,7 @@ on:
     
 env:
   PYTHON_VERSION: "3.12"
-  PYTHONPATH: "src"
+  PYTHONPATH: ".:src"
 
 jobs:
   quality-and-tests:
@@ -39,11 +39,11 @@ jobs:
 
       - name: Check formatting (black)
         run: |
-          python -m black --check src data tests serving pipelines dags
+          python -m black --check src data tests serving scripts dags
 
       - name: Lint (flake8)
         run: |
-          python -m flake8 src data tests serving pipelines dags --max-line-length 120 --extend-ignore=E501,E402,F401,F541,W291,W293
+          python -m flake8 src data tests serving scripts dags --max-line-length 120 --extend-ignore=E501,E402,F401,F541,W291,W293
 
       - name: Run tests
         run: |

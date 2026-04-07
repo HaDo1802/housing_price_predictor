@@ -1,4 +1,4 @@
-from housing_predictor.features.training_schema import MODEL_FEATURES
+from predictor.schema import MODEL_FEATURES
 from serving.api.feature_map import (
     API_TO_MODEL_FIELDS,
     CATEGORICAL_OPTIONS,

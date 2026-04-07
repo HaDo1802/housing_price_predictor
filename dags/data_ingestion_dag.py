@@ -109,7 +109,7 @@ def build_data_ingestion_dag():
         start_date=datetime(2025, 1, 1),
         schedule="@daily",
         catchup=False,
-        tags=["mlops", "housing_predictor", "ingestion"],
+        tags=["mlops", "predictor", "ingestion"],
         render_template_as_native_obj=True,
     ) as dag:
         ingest_data = PythonOperator(

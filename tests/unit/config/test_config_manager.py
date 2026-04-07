@@ -1,5 +1,5 @@
-from housing_predictor.config_manager import ConfigManager
-from housing_predictor.features.training_schema import (
+from predictor.config import ConfigManager
+from predictor.schema import (
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
 )
