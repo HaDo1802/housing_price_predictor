@@ -1,6 +1,6 @@
 [![ml-pipeline-ci](https://github.com/HaDo1802/housing_price_predictor/actions/workflows/ml_pipeline_ci.yml/badge.svg)](https://github.com/HaDo1802/housing_price_predictor/actions/workflows/ml_pipeline_ci.yml)
 
-# Housing Price Predictor: End-to-End MLOps Project
+# Housing Price Predictor: End-to-End MLOps Project (Currently Under Maintainance Work)
 
 ![Project Cover](image/architecture.png)
 
