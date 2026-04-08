@@ -12,7 +12,9 @@ def test_preprocessor_fits_on_canonical_training_columns(sample_housing_df):
 
     assert transformed.shape[0] == len(X)
     assert preprocessor.is_fitted is True
-    assert preprocessor.numeric_features + preprocessor.categorical_features == list(X.columns)
+    assert preprocessor.numeric_features + preprocessor.categorical_features == list(
+        X.columns
+    )
 
 
 def test_preprocessor_rejects_missing_required_feature(sample_housing_df):

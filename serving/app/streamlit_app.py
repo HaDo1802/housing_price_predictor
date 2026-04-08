@@ -162,7 +162,9 @@ def get_model_info() -> dict | None:
         return None
 
 
-def resolve_feature_spec() -> tuple[list[str], list[str], dict[str, str], dict[str, list[str]], list[str]]:
+def resolve_feature_spec() -> (
+    tuple[list[str], list[str], dict[str, str], dict[str, list[str]], list[str]]
+):
     """Return the local raw feature contract used by the model and UI."""
     return (
         list(NUMERIC_FEATURES),
@@ -185,9 +187,8 @@ def _fill_missing_location_from_district(df: pd.DataFrame) -> pd.DataFrame:
         df["longitude"] = np.nan
 
     for district, centroid in VEGAS_DISTRICT_CENTROIDS.items():
-        mask = (
-            df["vegas_district"].eq(district)
-            & (df["latitude"].isna() | df["longitude"].isna())
+        mask = df["vegas_district"].eq(district) & (
+            df["latitude"].isna() | df["longitude"].isna()
         )
         if mask.any():
             df.loc[mask, "latitude"] = df.loc[mask, "latitude"].fillna(
@@ -519,7 +520,9 @@ def main():
                 interval_cfg.get("coverage", 0.95) * 100
             )
         else:
-            st.error("Model could not be loaded. Check S3 credentials or local production artifacts.")
+            st.error(
+                "Model could not be loaded. Check S3 credentials or local production artifacts."
+            )
             st.session_state.confidence_level = 95.0
 
         st.markdown("---")

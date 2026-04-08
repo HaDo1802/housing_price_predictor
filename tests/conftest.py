@@ -21,7 +21,14 @@ def sample_housing_df():
             "bathrooms": [1.5, 2.0, 2.5, 3.0, 4.0, 2.0],
             "living_area": [950, 1400, 1650, 2200, 3100, 1500],
             "latitude": [36.1021, 36.1699, 36.1147, 36.2839, 36.1699, 36.1420],
-            "longitude": [-115.2450, -115.3378, -115.1728, -115.2710, -115.3378, -115.0987],
+            "longitude": [
+                -115.2450,
+                -115.3378,
+                -115.1728,
+                -115.2710,
+                -115.3378,
+                -115.0987,
+            ],
             "normalized_lot_area_value": [1800, 2500, 2200, 4200, 6100, 2600],
             "property_type": [
                 "CONDO",
@@ -62,7 +69,9 @@ def raw_training_df():
         bathrooms = 1.5 + (idx % 4) * 0.5
         living_area = 1100 + idx * 35
         lot_area = 2200 + idx * 60
-        property_type = "MOBILE" if idx % 17 == 0 else property_types[idx % len(property_types)]
+        property_type = (
+            "MOBILE" if idx % 17 == 0 else property_types[idx % len(property_types)]
+        )
         price = float(living_area * 235 + bedrooms * 12000 + lot_area * 4)
         rows.append(
             {

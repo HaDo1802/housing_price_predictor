@@ -66,7 +66,9 @@ class ProductionPreprocessor:
         )
 
     def fit_transform(self, X: pd.DataFrame):
-        missing = set(self.numeric_features + self.categorical_features) - set(X.columns)
+        missing = set(self.numeric_features + self.categorical_features) - set(
+            X.columns
+        )
         if missing:
             raise ValueError(f"Missing required features: {sorted(missing)}")
         X_out = self.pipeline.fit_transform(X)
@@ -76,18 +78,26 @@ class ProductionPreprocessor:
     def transform(self, X: pd.DataFrame):
         if not self.is_fitted:
             raise RuntimeError("Preprocessor must be fitted before calling transform.")
-        missing = set(self.numeric_features + self.categorical_features) - set(X.columns)
+        missing = set(self.numeric_features + self.categorical_features) - set(
+            X.columns
+        )
         if missing:
             raise ValueError(f"Missing required features: {sorted(missing)}")
         return self.pipeline.transform(X)
 
     def get_feature_names(self) -> list[str]:
         if not self.is_fitted:
-            raise RuntimeError("Preprocessor must be fitted before reading feature names.")
+            raise RuntimeError(
+                "Preprocessor must be fitted before reading feature names."
+            )
 
         feature_names = list(self.numeric_features)
-        encoder = self.pipeline.named_transformers_["categorical"].named_steps["encoder"]
-        feature_names.extend(encoder.get_feature_names_out(self.categorical_features).tolist())
+        encoder = self.pipeline.named_transformers_["categorical"].named_steps[
+            "encoder"
+        ]
+        feature_names.extend(
+            encoder.get_feature_names_out(self.categorical_features).tolist()
+        )
         return feature_names
 
     def save(self, path: str | Path):

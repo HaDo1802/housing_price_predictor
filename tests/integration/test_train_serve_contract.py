@@ -8,19 +8,17 @@ from predictor.predict import InferencePipeline
 from predictor.training_pipeline import TrainingPipeline
 
 
-def test_training_artifacts_can_be_loaded_by_inference_pipeline(tmp_path, raw_training_df):
+def test_training_artifacts_can_be_loaded_by_inference_pipeline(
+    tmp_path, raw_training_df
+):
     """
     End-to-end contract test:
     train on a tiny local dataset, save artifacts, then load them through the
     production inference pipeline and score one row.
     """
-    data_path = tmp_path / "train.csv"
-    raw_training_df.to_csv(data_path, index=False)
-
     with open("conf/config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
-    config["data"]["raw_data_path"] = str(data_path)
     config["preprocessing"]["handle_outliers"] = False
     config["model"]["hyperparameters"] = {}
 
@@ -29,6 +27,7 @@ def test_training_artifacts_can_be_loaded_by_inference_pipeline(tmp_path, raw_tr
         yaml.safe_dump(config, f, sort_keys=False)
 
     training = TrainingPipeline(str(config_path))
+    training.data_ingestor.fetch_data = lambda: raw_training_df.copy()
     training.run(track=False, promote=False)
 
     artifact_dir = training.save_artifacts(str(tmp_path / "artifacts"))
@@ -39,8 +38,14 @@ def test_training_artifacts_can_be_loaded_by_inference_pipeline(tmp_path, raw_tr
 
     assert len(preds) == 1
     assert np.isfinite(preds[0])
-    assert inference.preprocessor.numeric_features == training.preprocessor.numeric_features
-    assert inference.preprocessor.categorical_features == training.preprocessor.categorical_features
+    assert (
+        inference.preprocessor.numeric_features
+        == training.preprocessor.numeric_features
+    )
+    assert (
+        inference.preprocessor.categorical_features
+        == training.preprocessor.categorical_features
+    )
 
     with open(artifact_dir / "metadata.json", "r") as f:
         metadata = json.load(f)

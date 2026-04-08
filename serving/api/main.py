@@ -32,6 +32,7 @@ def _mask_bucket_name(bucket: str | None) -> str | None:
         return "*" * len(bucket)
     return f"{bucket[:2]}***{bucket[-2:]}"
 
+
 app = FastAPI(title="Housing Price Prediction API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
@@ -74,7 +75,9 @@ async def startup_event():
     except Exception as exc:
         app.state.model_load_error = str(exc)
         app.state.inference_pipeline = None
-        logger.error("Failed to load inference pipeline (model=%s): %s", model_name, exc)
+        logger.error(
+            "Failed to load inference pipeline (model=%s): %s", model_name, exc
+        )
 
 
 @app.exception_handler(Exception)

@@ -60,7 +60,9 @@ def _get_production_metric(
     if not production_versions:
         return None
 
-    production_version = max(production_versions, key=lambda version: int(version.version))
+    production_version = max(
+        production_versions, key=lambda version: int(version.version)
+    )
     prod_run = client.get_run(production_version.run_id)
     metric = prod_run.data.metrics.get(metric_name)
     return float(metric) if metric is not None else None
@@ -84,14 +86,18 @@ def promote_version(
     return str(version)
 
 
-def resolve_version(model_name: str, version: str | None = None, stage: str | None = None) -> str:
+def resolve_version(
+    model_name: str, version: str | None = None, stage: str | None = None
+) -> str:
     """Return the requested version or resolve one from the registry."""
     if version:
         return str(version)
 
     versions = list_versions(model_name)
     if stage:
-        versions = [item for item in versions if getattr(item, "current_stage", None) == stage]
+        versions = [
+            item for item in versions if getattr(item, "current_stage", None) == stage
+        ]
     if not versions:
         raise ValueError(
             f"No versions found for model '{model_name}'"
@@ -112,10 +118,9 @@ def evaluate_and_promote(
     """Register and promote the candidate run if it beats production."""
     client = MlflowClient()
     production_metric = _get_production_metric(model_name, client, metric_name)
-    is_better = (
-        production_metric is None
-        or float(current_metric) - float(production_metric) > float(improvement_threshold)
-    )
+    is_better = production_metric is None or float(current_metric) - float(
+        production_metric
+    ) > float(improvement_threshold)
 
     logger.info(
         "Promotion gate result: current=%s production=%s passed=%s",

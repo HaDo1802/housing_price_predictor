@@ -38,7 +38,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s"
+    )
     args = parse_args()
     bucket = args.bucket or os.getenv("ARTIFACT_BUCKET")
     result = sync_production_to_local_and_s3(

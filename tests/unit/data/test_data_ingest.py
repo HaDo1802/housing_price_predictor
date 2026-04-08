@@ -32,7 +32,9 @@ def test_select_training_columns_keeps_exact_contract(raw_training_df):
     assert list(selected.columns) == list(MODEL_FEATURES) + [config.data.target_column]
 
 
-def test_select_training_columns_fails_loudly_when_required_feature_missing(raw_training_df):
+def test_select_training_columns_fails_loudly_when_required_feature_missing(
+    raw_training_df,
+):
     config = ConfigManager("conf/config.yaml").config
     ingestor = DataIngestor(config)
 

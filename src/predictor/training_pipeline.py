@@ -126,7 +126,9 @@ class TrainingPipeline:
 
             self._log_step("EVALUATE")
             test_pred = np.asarray(self.model.predict(X_test_transformed), dtype=float)
-            self.metrics, self.prediction_interval = evaluate_predictions(y_test, test_pred)
+            self.metrics, self.prediction_interval = evaluate_predictions(
+                y_test, test_pred
+            )
 
             if track:
                 self._log_step("LOG ARTIFACTS")

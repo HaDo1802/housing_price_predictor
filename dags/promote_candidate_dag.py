@@ -49,10 +49,13 @@ def evaluate_and_promote_task(**context) -> None:
 
 
 def decide_sync_task(**context) -> bool:
-    result = context["ti"].xcom_pull(
-        task_ids="evaluate_and_promote",
-        key="promotion_result",
-    ) or {}
+    result = (
+        context["ti"].xcom_pull(
+            task_ids="evaluate_and_promote",
+            key="promotion_result",
+        )
+        or {}
+    )
     promoted = bool(result.get("promoted", False))
     if not promoted:
         logging.info(

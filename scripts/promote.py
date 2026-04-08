@@ -60,7 +60,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s"
+    )
     args = parse_args()
 
     if args.list_only:
@@ -121,7 +123,9 @@ def main() -> None:
         return
 
     target_version = resolve_version(args.model_name, version=args.version)
-    promote_version(model_name=args.model_name, version=target_version, stage=args.stage)
+    promote_version(
+        model_name=args.model_name, version=target_version, stage=args.stage
+    )
     print(
         {
             "model_name": args.model_name,

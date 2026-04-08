@@ -17,7 +17,9 @@ def test_resolve_version_prefers_latest_matching_stage(monkeypatch):
 
 
 def test_evaluate_and_promote_skips_registration_when_candidate_is_worse(monkeypatch):
-    monkeypatch.setattr(registry, "_get_production_metric", lambda *args, **kwargs: 0.91)
+    monkeypatch.setattr(
+        registry, "_get_production_metric", lambda *args, **kwargs: 0.91
+    )
     monkeypatch.setattr(registry, "register_model", lambda *args, **kwargs: "99")
     monkeypatch.setattr(registry, "promote_version", lambda *args, **kwargs: "99")
     monkeypatch.setattr(registry, "MlflowClient", lambda: object())

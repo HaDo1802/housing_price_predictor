@@ -55,14 +55,16 @@ class DataIngestor:
     def clean(self, df: pd.DataFrame) -> pd.DataFrame:
         """Apply business cleaning rules to the raw dataset."""
         cleaned = df.drop_duplicates().copy()
-        cleaned = cleaned.drop(columns=[c for c in DROP_COLUMNS if c in cleaned.columns])
+        cleaned = cleaned.drop(
+            columns=[c for c in DROP_COLUMNS if c in cleaned.columns]
+        )
 
         exclude_types = self.config.preprocessing.exclude_property_types
         if exclude_types and "property_type" in cleaned.columns:
             cleaned = cleaned[~cleaned["property_type"].isin(exclude_types)]
 
         cleaned[NUMERIC_FEATURES] = cleaned[NUMERIC_FEATURES].astype("float64")
-        
+
         return cleaned
 
     def select_training_columns(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -91,7 +93,10 @@ class DataIngestor:
         keep_mask = (
             (df[target_col].astype(float) >= self.config.preprocessing.min_price)
             & (df[target_col].astype(float) <= self.config.preprocessing.max_price)
-            & (df["living_area"].astype(float) >= self.config.preprocessing.min_living_area)
+            & (
+                df["living_area"].astype(float)
+                >= self.config.preprocessing.min_living_area
+            )
         )
         filtered = df.loc[keep_mask].copy()
         logger.info(

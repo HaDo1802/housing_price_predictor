@@ -15,6 +15,8 @@ def regression_metrics(y_true, y_pred) -> dict:
         "mae": mean_absolute_error(y_true, y_pred),
         "mse": mean_squared_error(y_true, y_pred),
     }
+
+
 def evaluate_predictions(y_true, y_pred) -> tuple[dict, dict]:
     """Return evaluation metrics and segmented relative-error intervals."""
     test_pred = np.asarray(y_pred, dtype=float)
@@ -35,15 +37,24 @@ def evaluate_predictions(y_true, y_pred) -> tuple[dict, dict]:
     q_by_segment = []
     for seg_idx in range(num_segments):
         if seg_idx == 0:
-            mask = pred_nonneg < edges[0] if edges else np.ones(len(pred_nonneg), dtype=bool)
+            mask = (
+                pred_nonneg < edges[0]
+                if edges
+                else np.ones(len(pred_nonneg), dtype=bool)
+            )
         elif seg_idx == num_segments - 1:
-            mask = pred_nonneg >= edges[-1] if edges else np.ones(len(pred_nonneg), dtype=bool)
+            mask = (
+                pred_nonneg >= edges[-1]
+                if edges
+                else np.ones(len(pred_nonneg), dtype=bool)
+            )
         else:
             mask = (pred_nonneg >= edges[seg_idx - 1]) & (pred_nonneg < edges[seg_idx])
         seg_err = rel_err[mask]
         q_by_segment.append(
             float(np.quantile(seg_err, 1 - alpha, method="higher"))
-            if seg_err.size >= min_seg_size else global_q
+            if seg_err.size >= min_seg_size
+            else global_q
         )
 
     prediction_interval = {

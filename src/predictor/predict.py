@@ -97,7 +97,9 @@ class InferencePipeline:
                 }
 
                 for artifact_name, local_path in artifact_map.items():
-                    s3.download_file(bucket, f"{prefix}/{artifact_name}", str(local_path))
+                    s3.download_file(
+                        bucket, f"{prefix}/{artifact_name}", str(local_path)
+                    )
 
                 self.model = _load_pickle_with_compat(artifact_map["model.pkl"])
                 self.preprocessor = _load_pickle_with_compat(
@@ -110,7 +112,9 @@ class InferencePipeline:
             self._loaded_from = "s3"
             logger.info("Loaded production artifacts from %s", s3_base)
         except Exception as exc:
-            raise RuntimeError(f"Failed to load production artifacts from {s3_base}: {exc}")
+            raise RuntimeError(
+                f"Failed to load production artifacts from {s3_base}: {exc}"
+            )
 
     def _load_from_local(self):
         """Load model, preprocessor, and metadata from local production directory."""
@@ -243,7 +247,9 @@ class InferencePipeline:
             if feature_name not in X_prepared.columns:
                 X_prepared[feature_name] = default_value
             else:
-                X_prepared[feature_name] = X_prepared[feature_name].fillna(default_value)
+                X_prepared[feature_name] = X_prepared[feature_name].fillna(
+                    default_value
+                )
         return X_prepared
 
     def get_feature_importance(self, top_n: int = 10) -> pd.DataFrame:

@@ -20,39 +20,64 @@ Transforming the classic **beginner house price prediction** problem into a **pr
 
 ## Airflow Orchestration
 
-The project now includes two Airflow DAGs to automate training operations:
+The Airflow layer is now split into three focused DAGs:
 
-- `data_ingestion_dag`: runs daily ingestion, then drift gate logic, then triggers retraining.
-- `retraining_dag`: runs retraining steps and writes training artifacts.
+- `data_ingestion_dag`
+  - scheduled `@daily` (can be adjusted to weekly when the dataset is large enough )
+  - ingests the latest dataset from Supabase
+  - runs drift checks
+  - triggers candidate training only when retraining is needed
+- `train_candidate_dag`
+  - is triggered by `data_ingestion_dag`
+  - runs tracked training and pushes the MLflow `run_id` and `test_r2`
+- `promote_candidate_dag`
+  - is triggered by `train_candidate_dag`
+  - evaluates the candidate against Production, promotes if it wins, then syncs the production snapshot to local files and S3
+
+Why split this into three DAGs:
+
+- ingestion, training, and promotion are different operational concerns
+- each DAG stays shorter and easier for development and debug
 
 ### DAG: Data Ingestion + Drift Gate
 
-![Data Ingestion DAG](image/data_drift_dag.png)
+![Data Ingestion DAG](image/ingestion_dag.png)
 
-### DAG: Retraining Pipeline
+This is the only scheduled DAG in the system. It runs daily, checks whether drift is meaningful enough to justify retraining, and only then triggers the next DAG.
 
-![Retraining DAG](image/retrain_dag.png)
+### DAG: Candidate Training
 
-Current operating mode:
+![Training DAG](image/training_dag.png)
 
-- We are intentionally retraining daily for now to populate training history quickly.
-- This is acceptable because current training time is fast, and I did not registry training model automatically .
-- PSI drift detection logic is already implemented and can be used as the strict gate once dataset volume grows.
+This DAG is event-driven. It starts only when ingestion decides retraining is needed, then logs a candidate run to MLflow and forwards the run metadata downstream.
 
+### DAG: Promotion + Production Sync
+
+![Promotion DAG](image/registry_promote_dag.png)
+
+It compares the candidate against the current Production model, promotes only when the metric gate passes, and then publishes the new production artifact snapshot.
 
 
 ## Project Goals
 
-This repository is designed as a learning + portfolio project to show how an ML model can move from notebook experimentation into a maintainable production workflow.
+This repository is designed as a learning + portfolio project to show how an ML model can move from notebook experimentation into a maintainable production workflow, focusing on the MLOps design rather than optimizing the model accuracy (which is limited size of the current live data)
 
 Core goals:
 
-- Build a reliable training pipeline with leakage-safe preprocessing.
-- Track runs, metrics, and lineage with MLflow.
-- Promote models using explicit quality gates instead of manual intuition.
-- Serve predictions through a stable API and web UI.
-- Keep deployment paths flexible for local and containerized runtime.
-- Add monitoring hooks for post-deployment feedback and drift detection.
+- Turn a one-off notebook workflow into a repeatable training system.
+- Learn how to track runs, configs, metrics, and lineage instead of guessing what changed.
+- Practice promotion decisions through explicit quality gates, not manual intuition.
+- Separate training, registry, artifact delivery, and serving so each part is easier to debug.
+- Build a serving workflow that depends on a stable production snapshot, not the training environment.
+- Add orchestration and drift checks so retraining can be triggered by signals, not by habit.
+
+Why this is worth learning instead of stopping at a regular data science notebook:
+
+- A notebook can train a model once. An MLOps system can train it the same way every time.
+- A notebook shows one result. An MLOps system keeps history, lineage, and promotion decisions.
+- A notebook mixes everything together. An MLOps system separates training, deployment, and serving.
+- A notebook gives you a model file. An MLOps system gives you a governed production artifact.
+- A notebook rarely answers “what is in production and why?” An MLOps system is built for that.
 
 ## Why This Architecture
 
@@ -80,46 +105,10 @@ Implemented in [config.py](src/predictor/config.py) with a single YAML source:
 
 Why this pattern matters:
 
-- keeps training configuration explicit and easy to audit
-- avoids hard-coding paths and hyperparameters
-- improves reproducibility and auditability
+- keeps training configuration explicit and easy to audit, we only changes in 1 place for hundreds different experiemental runs
 
-### 2) Leakage-Safe Data and Feature Pipeline
 
-Implemented across:
-
-- [data_ingest.py](src/predictor/data_ingest.py)
-- [preprocessor.py](src/predictor/preprocessor.py)
-- [training_pipeline.py](src/predictor/training_pipeline.py)
-
-Key practice:
-
-- split first
-- fit preprocessing only on training data
-- transform val/test/production with the fitted transformer
-
-Why this pattern matters:
-
-- prevents target/data leakage
-- keeps offline evaluation closer to production reality
-- ensures consistent feature transformations online/offline
-
-### 3) Reproducible Model Factory + Validation
-
-Implemented in [models.py](src/predictor/models.py):
-
-- model type registry (`random_forest`, `ridge`, `gradient_boosting`, `hist_gradient_boosting`), as user can choose mulitple models for testing purpose
-- hyperparameter validation against sklearn constructor signatures
-- optional `TransformedTargetRegressor` (`log1p`/`expm1`) for stable target modeling
-
-Why this pattern matters:
-
-- limits configuration mistakes
-- standardizes model creation
-- makes experiments comparable
-- serve as a centralized remote that control all the variable/config for the project
-
-### 4) Experiment Tracking and Registry Governance
+### 2) Experiment Tracking and Registry Governance
 
 Implemented in:
 
@@ -136,24 +125,8 @@ Why this pattern matters:
 - you can answer "what model is in production and where did it come from?"
 - supports rollback/debugging and lineage traceability
 
-### 5) Metric Gate Before Promotion
 
-Implemented in [registry.py](src/predictor/registry.py):
-
-- compare candidate metric vs current production metric
-- promote only if threshold is exceeded
-
-Default behavior:
-
-- if no production model exists: accept candidate
-- else require improvement (default threshold `0.02` on `test_r2`)
-
-Why this pattern matters:
-
-- prevents accidental regressions from being promoted
-- turns model promotion into a policy, not an ad-hoc decision
-
-### 6) Artifact Strategy for Serving Reliability
+### 3) Artifact Strategy for Serving Reliability
 
 Implemented in [sync_production_artifacts.py](scripts/sync_production_artifacts.py), [artifact_store.py](src/predictor/artifact_store.py), and [predict.py](src/predictor/predict.py):
 
@@ -167,38 +140,7 @@ Why this pattern matters:
 - keeps serving decoupled from MLflow runtime availability
 - gives Streamlit and future APIs one stable production artifact source
 
-### 7) Online Serving Interface
-
-Implemented in:
-
-- [main.py](serving/api/main.py)
-- [predict.py](serving/api/routers/predict.py)
-- [model.py](serving/api/routers/model.py)
-- [health.py](serving/api/routers/health.py)
-- [streamlit_app.py](serving/app/streamlit_app.py)
-
-Serving capabilities:
-
-- single prediction
-- batch prediction
-- file upload prediction (`.csv`/Excel)
-- health endpoint
-- model info endpoint
-- confidence interval output (when estimator supports ensembles)
-
-Why this pattern matters:
-
-- clean separation between model internals and consumer-facing interfaces
-- easier integration with product frontends and external services
-
-Current serving mode:
-
-- [streamlit_app.py](serving/app/streamlit_app.py) is the primary deployed interface
-- FastAPI remains in the repo so other engineers can still run `uvicorn serving.api.main:app --reload` locally and build their own API-based integrations
-- both Streamlit and FastAPI use the same inference layer in [predict.py](src/predictor/predict.py)
-- production inference expects S3 artifact configuration via `ARTIFACT_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_DEFAULT_REGION`
-
-### 8) Post-Deployment Drift Monitoring
+### 4) Post-Deployment Drift Monitoring
 
 Implemented in:
 
@@ -213,7 +155,7 @@ Why this pattern matters:
 - shifts project from pure training to lifecycle monitoring
 - creates a path toward retraining triggers and model observability
 
-### 9) CI Quality Gates
+### 5) CI Quality Gates
 
 Implemented in [ml_pipeline_ci.yml](.github/workflows/ml_pipeline_ci.yml):
 
@@ -226,22 +168,6 @@ Why this pattern matters:
 - enforces consistent standards before merge
 - catches integration errors early (e.g., missing tracked modules/imports)
 
-## End-to-End Workflow
-
-```text
-Raw data
-  -> schema-driven feature contract
-  -> train/val/test split
-  -> fit preprocessor on train only
-  -> train model
-  -> evaluate on val/test
-  -> log run + artifacts to MLflow
-  -> select candidate run
-  -> register/promote (if pass)
-  -> sync Production artifacts to local + S3
-  -> serve via Streamlit/API
-  -> monitor drift
-```
 
 ## Repository Structure
 

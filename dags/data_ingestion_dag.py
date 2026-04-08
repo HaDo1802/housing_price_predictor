@@ -78,9 +78,7 @@ def check_drift_task(**context) -> None:
 
 
 def decide_retrain_task(**context) -> bool:
-    return bool(
-        context["ti"].xcom_pull(task_ids="check_drift", key="should_retrain")
-    )
+    return bool(context["ti"].xcom_pull(task_ids="check_drift", key="should_retrain"))
 
 
 def build_data_ingestion_dag():
