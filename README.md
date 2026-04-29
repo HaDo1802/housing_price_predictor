@@ -20,6 +20,8 @@ Transforming the classic **beginner house price prediction** problem into a **pr
 
 ## Airflow Orchestration
 
+The Airflow layer automates the same three-step deployment flow (train → promote → sync) end-to-end. Use Airflow when you want hands-off automation triggered by drift signals. Use [local scripts](#pipeline-scripts) when you need manual control or human review between steps — they implement the same logic.
+
 The Airflow layer is now split into three focused DAGs:
 
 - `data_ingestion_dag`
@@ -243,26 +245,75 @@ make ui
 
 This is the primary deployed interface. Streamlit also expects the same S3 artifact environment variables when running against the production model snapshot.
 
+## Deployment Flow
+
+Every deployment — whether run manually or via Airflow — follows the same three steps:
+
+```
+train  →  promote  →  sync
+  ↓           ↓          ↓
+candidate   approve   ship to users
+```
+
+**train** — runs the full training pipeline and logs a candidate run to MLflow. `promote_to_production` in the output is always `False`; training never auto-promotes.
+
+**promote** — evaluates the candidate against the current Production model. Promotion only proceeds when the candidate's `test_r2` improves by more than `0.02`. If no Production model exists yet, the candidate is promoted unconditionally.
+
+**sync** — after `promote` updates a label in the MLflow registry database, `sync` copies the promoted model files (`model.pkl`, `preprocessor.pkl`, `metadata.json`, `config.yaml`) to the fixed S3 path `models/production/`. The serving layer (Streamlit and FastAPI) reads exclusively from that S3 path and never queries MLflow directly. Without this step, users still get the old model even after promotion.
+
+| | Local scripts | Airflow |
+|---|---|---|
+| When to use | Manual control, debugging, one-off runs | Automated, scheduled, hands-off |
+| Trigger | You run each step yourself | `data_ingestion_dag` starts the chain on detected drift |
+| Promotion gate | Applied by `promote.py` | Applied by `evaluate_and_promote` task inside `promote_candidate_dag` |
+| Visibility | Terminal output | Airflow UI, XCom, task logs |
+
 ## Pipeline Scripts
 
-- Train pipeline:
+Scripts map directly to the three deployment steps. Run them in order — each step is independent and requires the previous one to have completed.
+
+**Step 1 — Train**
 
 ```bash
 python scripts/train.py
 ```
 
-- Promote model / sync production artifacts:
+Logs a full MLflow run with metrics, artifacts, and config. `promote_to_production` in the output is always `False`. Copy the `run_id` from the MLflow UI or terminal output before proceeding to promote.
+
+**Step 2 — Promote**
 
 ```bash
-python scripts/promote.py --model-name housing_price_predictor --version 1 --stage Production
+python scripts/promote.py \
+  --model-name housing_price_predictor \
+  --run-id YOUR_RUN_ID
+```
+
+Registers the run as a model version and compares its `test_r2` against the current Production model. Promotion proceeds only when the improvement exceeds `0.02`. If no Production model exists yet, it promotes unconditionally. Promotion only updates a label in the MLflow registry — serving still reads the old model until sync runs.
+
+**Step 3 — Sync**
+
+```bash
 python scripts/sync_production_artifacts.py
 ```
 
-- Drift check utility:
+Pulls the promoted model from MLflow and uploads it to `s3://<ARTIFACT_BUCKET>/models/production/`. This is what actually delivers the new model to Streamlit and FastAPI users. Requires `ARTIFACT_BUCKET` to be set.
+
+**Utilities**
 
 ```bash
+# List all registered model versions and their stages
+python scripts/promote.py --list-only
+
+# Drift check against the saved reference snapshot
 python -m predictor.drift
+
+# Inspect MLflow runs
+mlflow ui  # http://localhost:5000
 ```
+
+**GitHub Actions manual trigger**
+
+`manual_mlops_ops.yml` lets you run train, promote, or sync individually from the GitHub Actions UI without local setup. Select the operation from the dropdown, supply a `run_id` for promote, and the workflow uses repository secrets for all credentials. Promote still applies the same metric gate (> 0.02 R² improvement) — it is not a force-override. The only exception is when no Production model exists yet.
 
 ## API Endpoints
 
